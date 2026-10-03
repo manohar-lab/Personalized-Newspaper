@@ -1,0 +1,37 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  --background: #FAF9F5;
+  --foreground: #121212;
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Newspaper Styling */
+.newspaper-border-double {
+  border-bottom: 3px double #121212;
+}
+
+.newspaper-border-thin {
+  border-bottom: 1px solid #D3CBB9;
+}
+
+.newspaper-grid-divider {
+  border-right: 1px solid #E8E4D9;
+}
+
+@media (max-width: 768px) {
+  .newspaper-grid-divider {
+    border-right: none;
+    border-bottom: 1px solid #E8E4D9;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
