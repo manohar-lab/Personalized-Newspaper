@@ -6,14 +6,24 @@ from app.core.logging import setup_logging, logger
 from app.api.v1.router import api_v1_router
 
 
+from app.database.session import AsyncSessionLocal
+from app.database.seed_topics import seed_topics
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup initialization
     setup_logging()
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
+    try:
+        async with AsyncSessionLocal() as session:
+            await seed_topics(session)
+    except Exception as e:
+        logger.warning(f"Startup topic seed error: {e}")
     yield
     # Shutdown cleanup
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
+
 
 
 app = FastAPI(
