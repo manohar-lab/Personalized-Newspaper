@@ -7,6 +7,7 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.interest import UserInterest
+    from app.models.action import UserArticleAction
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -36,6 +37,9 @@ class User(Base):
     )
     interests: Mapped[List["UserInterest"]] = relationship(
         "UserInterest", back_populates="user", cascade="all, delete-orphan"
+    )
+    actions: Mapped[List["UserArticleAction"]] = relationship(
+        "UserArticleAction", back_populates="user", cascade="all, delete-orphan"
     )
 
 

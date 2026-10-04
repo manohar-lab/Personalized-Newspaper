@@ -42,6 +42,12 @@ export interface Topic {
   created_at: string;
 }
 
+export interface TopicSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface UserInterest {
   id: string;
   topic_slug: string;
@@ -64,4 +70,87 @@ export interface ArticlePreview {
   relevanceScore: number;
   isFullTextAvailable: boolean;
   originalUrl: string;
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string | null;
+  content?: string | null;
+  source_name?: string | null;
+  source_url?: string | null;
+  author?: string | null;
+  image_url?: string | null;
+  published_at: string;
+  created_at: string;
+  reading_time_minutes: number;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  language: string;
+  is_full_text_available: boolean;
+  topics: TopicSummary[];
+  is_saved?: boolean;
+  is_liked?: boolean;
+  is_not_interested?: boolean;
+  relevance_score?: number | null;
+}
+
+export interface ArticleDetail extends Article {
+  related_articles: Article[];
+}
+
+export interface ArticleListResponse {
+  items: Article[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface EditionInfo {
+  date: string;
+  title: string;
+  subtitle?: string | null;
+}
+
+export interface UserSummary {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface NewspaperSection {
+  topic: TopicSummary;
+  total_articles: number;
+  articles: Article[];
+}
+
+export interface NewspaperResponse {
+  edition: EditionInfo;
+  user: UserSummary;
+  curation_summary: string;
+  has_interests: boolean;
+  featured_article: Article | null;
+  sections: NewspaperSection[];
+}
+
+export interface UserActionResponse {
+  success: boolean;
+  action: string;
+  article_id: string;
+  message: string;
+}
+
+export interface SavedArticleItem {
+  id: string;
+  article: Article;
+  saved_at: string;
+}
+
+export interface SavedArticlesListResponse {
+  items: SavedArticleItem[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
 }

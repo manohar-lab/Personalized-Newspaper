@@ -11,6 +11,7 @@ from app.core.security import decode_access_token
 from app.models.user import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -41,4 +42,27 @@ async def get_current_user(
     if not user or not user.is_active:
         raise credentials_exception
 
+    return user
+
+async def get_optional_current_user(
+    token: str = Depends(oauth2_scheme_optional),
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    if not token:
+        return None
+    payload = decode_access_token(token)
+    if not payload:
+        return None
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        return None
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        return None
+    stmt = select(User).options(selectinload(User.profile)).where(User.id == user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        return None
     return user

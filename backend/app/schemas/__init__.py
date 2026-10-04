@@ -12,6 +12,23 @@ from app.schemas.interest import (
     UpdateInterestsRequest,
     OnboardingInterestsRequest,
 )
+from app.schemas.article import (
+    TopicSummary,
+    ArticleBase,
+    ArticleDetailResponse,
+    ArticleListResponse,
+)
+from app.schemas.newspaper import (
+    EditionInfo,
+    UserSummary,
+    NewspaperSection,
+    NewspaperResponse,
+)
+from app.schemas.action import (
+    UserActionResponse,
+    SavedArticleItem,
+    SavedArticlesListResponse,
+)
 
 __all__ = [
     "UserRegister",
@@ -24,4 +41,16 @@ __all__ = [
     "UserInterestResponse",
     "UpdateInterestsRequest",
     "OnboardingInterestsRequest",
+    "TopicSummary",
+    "ArticleBase",
+    "ArticleDetailResponse",
+    "ArticleListResponse",
+    "EditionInfo",
+    "UserSummary",
+    "NewspaperSection",
+    "NewspaperResponse",
+    "UserActionResponse",
+    "SavedArticleItem",
+    "SavedArticlesListResponse",
 ]
+
