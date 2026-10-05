@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, List
-from sqlalchemy import Table, Column, String, Text, Integer, Boolean, DateTime, ForeignKey, UUID, Index
+from sqlalchemy import Table, Column, String, Text, Integer, Float, Boolean, DateTime, ForeignKey, UUID, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
@@ -10,11 +10,13 @@ if TYPE_CHECKING:
     from app.models.action import UserArticleAction
     from app.models.source import NewsSource
     from app.models.feed import NewsFeed
+    from app.models.entity import Entity
+    from app.models.analysis import ArticleAnalysis, ArticleKeyword
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
-# Junction table for Article <-> Topic (Many-to-Many)
+# Junction table for Article <-> Topic (Many-to-Many with confidence)
 article_topics = Table(
     "article_topics",
     Base.metadata,
@@ -31,6 +33,12 @@ article_topics = Table(
         ForeignKey("topics.id", ondelete="CASCADE"),
         primary_key=True,
         index=True,
+    ),
+    Column(
+        "confidence",
+        Float,
+        default=1.0,
+        nullable=False,
     ),
 )
 
@@ -124,3 +132,30 @@ class Article(Base):
     feed: Mapped[Optional["NewsFeed"]] = relationship(
         "NewsFeed", back_populates="articles"
     )
+    analysis: Mapped[Optional["ArticleAnalysis"]] = relationship(
+        "ArticleAnalysis", back_populates="article", uselist=False, cascade="all, delete-orphan"
+    )
+    keywords: Mapped[List["ArticleKeyword"]] = relationship(
+        "ArticleKeyword", back_populates="article", cascade="all, delete-orphan"
+    )
+    entities: Mapped[List["Entity"]] = relationship(
+        "Entity",
+        secondary="article_entities",
+        backref="articles",
+    )
+
+    @property
+    def primary_category(self) -> Optional[str]:
+        return self.analysis.primary_category if self.analysis else None
+
+    @property
+    def article_type(self) -> Optional[str]:
+        return self.analysis.article_type if self.analysis else None
+
+    @property
+    def summary(self) -> Optional[str]:
+        return self.analysis.summary if self.analysis else None
+
+    @property
+    def importance_score(self) -> Optional[float]:
+        return self.analysis.importance_score if self.analysis else None

@@ -34,6 +34,10 @@ class ArticleBase(BaseModel):
     is_full_text_available: bool = True
     extraction_status: Optional[str] = "NOT_ATTEMPTED"
     extraction_method: Optional[str] = None
+    primary_category: Optional[str] = None
+    article_type: Optional[str] = None
+    summary: Optional[str] = None
+    importance_score: Optional[float] = None
     topics: List[TopicSummary] = []
     is_saved: Optional[bool] = False
     is_liked: Optional[bool] = False

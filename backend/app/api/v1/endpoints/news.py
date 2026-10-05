@@ -13,7 +13,9 @@ from app.ingestion.services.source_service import SourceService
 from app.ingestion.services.ingestion_service import IngestionService
 from app.ingestion.scraper.scraper_service import ScraperService
 from app.services.article_extraction_service import ArticleExtractionService
+from app.ai.services.article_analysis_service import ArticleAnalysisService
 from app.models.article import Article
+from app.models.analysis import ArticleAnalysis
 from app.schemas.news import (
     SourceCreate,
     SourceResponse,
@@ -28,6 +30,12 @@ from app.schemas.news import (
     ExtractionResultResponse,
     ExtractPendingResponse,
     ExtractionStatusDetailResponse,
+    AnalyzeArticleResponse,
+    AnalyzeBatchResponse,
+    ArticleAnalysisDetailResponse,
+    TopicDetailItem,
+    EntityDetailItem,
+    KeywordDetailItem,
 )
 
 router = APIRouter()
@@ -336,6 +344,124 @@ async def get_article_extraction_status(
         canonical_url=article.canonical_url or article.source_url,
         is_full_text_available=article.is_full_text_available,
         error=article.extraction_error or article.scrape_error,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 7: AI Article Analysis & Understanding Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/articles/{article_id}/analyze", response_model=AnalyzeArticleResponse)
+async def analyze_single_article(
+    article_id: uuid.UUID,
+    force: bool = Query(default=False, description="Re-analyze even if already analyzed under current version"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Triggers AI analysis, understanding, classification, and embeddings for an article.
+    Protected endpoint (requires authentication).
+    """
+    service = ArticleAnalysisService(db)
+    result = await service.analyze_article(article_id, force=force)
+    return AnalyzeArticleResponse(
+        article_id=uuid.UUID(result["article_id"]),
+        status=result["status"],
+        primary_category=result.get("primary_category"),
+        article_type=result.get("article_type"),
+        importance_score=result.get("importance_score"),
+        summary=result.get("summary"),
+        language=result.get("language"),
+        topics=[TopicDetailItem(**t) for t in result.get("topics", [])],
+        entities=[EntityDetailItem(**e) for e in result.get("entities", [])],
+        keywords=[KeywordDetailItem(**k) for k in result.get("keywords", [])],
+        has_embedding=result.get("has_embedding", False),
+        analysis_version=result.get("analysis_version"),
+        duration_seconds=result.get("duration_seconds"),
+        error=result.get("error"),
+    )
+
+
+@router.post("/articles/analyze-pending", response_model=AnalyzeBatchResponse)
+async def analyze_pending_articles_batch(
+    limit: int = Query(default=20, ge=1, le=100, description="Max articles to analyze in this batch"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Batch analyzes pending articles (un-analyzed or previously failed).
+    Protected endpoint (requires authentication).
+    """
+    service = ArticleAnalysisService(db)
+    result = await service.analyze_pending_articles(limit=limit)
+    return AnalyzeBatchResponse(**result)
+
+
+@router.get("/articles/{article_id}/analysis", response_model=ArticleAnalysisDetailResponse)
+async def get_article_analysis_details(
+    article_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieves the complete AI analysis metadata, topics, entities, and keywords for an article.
+    """
+    stmt = (
+        select(Article)
+        .options(
+            selectinload(Article.analysis),
+            selectinload(Article.topics),
+            selectinload(Article.entities),
+            selectinload(Article.keywords),
+        )
+        .where(Article.id == article_id)
+    )
+    res = await db.execute(stmt)
+    article = res.scalar_one_or_none()
+
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Article not found",
+        )
+
+    analysis = article.analysis
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="AI analysis has not been performed for this article",
+        )
+
+    # Build topic items with confidence if available
+    topics_list = [
+        TopicDetailItem(name=t.name, slug=t.slug, confidence=1.0)
+        for t in article.topics
+    ]
+    entities_list = [
+        EntityDetailItem(name=e.name, type=e.entity_type, confidence=1.0)
+        for e in article.entities
+    ]
+    keywords_list = [
+        KeywordDetailItem(keyword=k.keyword, weight=k.weight)
+        for k in article.keywords
+    ]
+
+    return ArticleAnalysisDetailResponse(
+        article_id=article.id,
+        primary_category=analysis.primary_category,
+        article_type=analysis.article_type,
+        importance_score=analysis.importance_score,
+        summary=analysis.summary,
+        language=analysis.language,
+        analysis_status=analysis.analysis_status,
+        analysis_version=analysis.analysis_version,
+        analyzed_at=analysis.analyzed_at,
+        has_embedding=analysis.embedding is not None,
+        embedding_model=analysis.embedding_model,
+        topics=topics_list,
+        entities=entities_list,
+        keywords=keywords_list,
+        error=analysis.analysis_error,
     )
 
 

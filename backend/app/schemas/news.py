@@ -180,3 +180,66 @@ class ExtractionStatusDetailResponse(BaseModel):
     canonical_url: Optional[str] = None
     is_full_text_available: bool = False
     error: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Phase 7: AI Analysis Schemas
+# ---------------------------------------------------------------------------
+
+class TopicDetailItem(BaseModel):
+    name: str
+    slug: str
+    confidence: float
+
+
+class EntityDetailItem(BaseModel):
+    name: str
+    type: str
+    confidence: float
+
+
+class KeywordDetailItem(BaseModel):
+    keyword: str
+    weight: float
+
+
+class AnalyzeArticleResponse(BaseModel):
+    article_id: uuid.UUID
+    status: str
+    primary_category: Optional[str] = None
+    article_type: Optional[str] = None
+    importance_score: Optional[float] = None
+    summary: Optional[str] = None
+    language: Optional[str] = None
+    topics: List[TopicDetailItem] = []
+    entities: List[EntityDetailItem] = []
+    keywords: List[KeywordDetailItem] = []
+    has_embedding: bool = False
+    analysis_version: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    error: Optional[str] = None
+
+
+class AnalyzeBatchResponse(BaseModel):
+    processed: int
+    successful: int
+    failed: int
+    results: List[Dict[str, Any]]
+
+
+class ArticleAnalysisDetailResponse(BaseModel):
+    article_id: uuid.UUID
+    primary_category: Optional[str] = None
+    article_type: Optional[str] = None
+    importance_score: float = 0.5
+    summary: Optional[str] = None
+    language: str = "en"
+    analysis_status: str
+    analysis_version: str
+    analyzed_at: Optional[datetime] = None
+    has_embedding: bool = False
+    embedding_model: Optional[str] = None
+    topics: List[TopicDetailItem] = []
+    entities: List[EntityDetailItem] = []
+    keywords: List[KeywordDetailItem] = []
+    error: Optional[str] = None

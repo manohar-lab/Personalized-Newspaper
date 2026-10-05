@@ -1,5 +1,5 @@
 import os
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     MIN_REQUEST_DELAY_SECONDS: float = Field(default=1.0)
     MIN_ARTICLE_BODY_LENGTH: int = Field(default=150)
     ROBOTS_CACHE_TTL_SECONDS: int = Field(default=3600)
+
+    # AI Article Analysis Configuration
+    AI_PROVIDER: str = Field(default="mock")  # "mock" | "openai" | "gemini"
+    AI_MODEL: str = Field(default="gpt-4o-mini")
+    AI_API_KEY: Optional[str] = Field(default=None)
+    AI_API_BASE_URL: Optional[str] = Field(default=None)
+    EMBEDDING_PROVIDER: str = Field(default="mock")  # "mock" | "openai" | "gemini"
+    EMBEDDING_MODEL: str = Field(default="text-embedding-3-small")
+    MAX_ANALYSIS_CHARS: int = Field(default=12000)
+    ANALYSIS_CONCURRENCY: int = Field(default=3)
+    ANALYSIS_VERSION: str = Field(default="v1")
 
     # Database Configuration
     DATABASE_URL: str = Field(

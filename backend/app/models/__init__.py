@@ -7,6 +7,8 @@ from app.models.action import UserArticleAction, ActionType
 from app.models.source import NewsSource
 from app.models.feed import NewsFeed
 from app.models.ingestion_run import IngestionRun
+from app.models.entity import Entity, article_entities
+from app.models.analysis import ArticleAnalysis, ArticleKeyword
 
 __all__ = [
     "Base",
@@ -21,5 +23,9 @@ __all__ = [
     "NewsSource",
     "NewsFeed",
     "IngestionRun",
+    "Entity",
+    "article_entities",
+    "ArticleAnalysis",
+    "ArticleKeyword",
 ]
 

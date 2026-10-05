@@ -94,6 +94,10 @@ export interface Article {
   is_full_text_available: boolean;
   extraction_status?: "NOT_ATTEMPTED" | "PENDING" | "SUCCESS" | "PARTIAL" | "FAILED" | "ROBOTS_BLOCKED" | "PAYWALL" | "ACCESS_DENIED" | "UNSUPPORTED" | string;
   extraction_method?: "TRAFILATURA" | "JSON_LD" | "OPENGRAPH" | "FALLBACK" | string | null;
+  primary_category?: string | null;
+  article_type?: string | null;
+  summary?: string | null;
+  importance_score?: number | null;
   topics: TopicSummary[];
   is_saved?: boolean;
   is_liked?: boolean;
