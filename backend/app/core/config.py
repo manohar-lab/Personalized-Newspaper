@@ -95,6 +95,23 @@ class Settings(BaseSettings):
     NEWSPAPER_CLUSTER_SIMILARITY_THRESHOLD: float = Field(default=0.85)
     NEWSPAPER_DEFAULT_MASTHEAD: str = Field(default="YOUR DAILY")
 
+    # Phase 10: Autonomous Background Pipeline & Scheduler Settings
+    SCHEDULER_ENABLED: bool = Field(default=True)
+    SCHEDULER_TIMEZONE: str = Field(default="UTC")
+    DEFAULT_TIMEZONE: str = Field(default="Asia/Kolkata")
+    NEWS_FETCH_INTERVAL_MINUTES: int = Field(default=30)
+    ARTICLE_EXTRACTION_INTERVAL_MINUTES: int = Field(default=15)
+    ARTICLE_ANALYSIS_INTERVAL_MINUTES: int = Field(default=15)
+    EDITION_GENERATION_HOUR: int = Field(default=6)
+    CLEANUP_INTERVAL_HOURS: int = Field(default=24)
+    MAX_RETRY_ATTEMPTS: int = Field(default=3)
+    RETRY_BACKOFF_BASE_SECONDS: int = Field(default=60)
+    AI_MAX_CONCURRENCY: int = Field(default=5)
+    AI_BATCH_SIZE: int = Field(default=20)
+    EXTRACTION_BATCH_SIZE: int = Field(default=50)
+    USER_BATCH_SIZE: int = Field(default=100)
+    CLEANUP_RETENTION_DAYS: int = Field(default=30)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

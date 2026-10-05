@@ -9,6 +9,7 @@ from app.models.feed import NewsFeed
 from app.models.ingestion_run import IngestionRun
 from app.models.entity import Entity, article_entities
 from app.models.analysis import ArticleAnalysis, ArticleKeyword
+from app.models.pipeline_run import PipelineRun
 
 __all__ = [
     "Base",
@@ -27,5 +28,6 @@ __all__ = [
     "article_entities",
     "ArticleAnalysis",
     "ArticleKeyword",
+    "PipelineRun",
 ]
 

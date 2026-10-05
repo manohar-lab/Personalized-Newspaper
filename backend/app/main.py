@@ -12,6 +12,9 @@ from app.database.seed_articles import seed_articles
 from app.database.seed_feeds import seed_sources_and_feeds
 
 
+from app.workers.scheduler import start_scheduler, stop_scheduler
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup initialization
@@ -24,9 +27,21 @@ async def lifespan(app: FastAPI):
             await seed_articles(session)
     except Exception as e:
         logger.warning(f"Startup seed error: {e}")
+
+    # Start background scheduler if enabled
+    if settings.SCHEDULER_ENABLED and settings.ENVIRONMENT != "testing":
+        try:
+            start_scheduler()
+        except Exception as e:
+            logger.error(f"Failed to start background scheduler: {e}")
+
     yield
     # Shutdown cleanup
     logger.info(f"Shutting down {settings.PROJECT_NAME}")
+    try:
+        await stop_scheduler()
+    except Exception as e:
+        logger.error(f"Error during scheduler shutdown: {e}")
 
 
 

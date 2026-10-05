@@ -99,32 +99,45 @@ class NewspaperGenerationService:
 
     async def generate_daily_edition(
         self,
-        user: User,
+        user: Any = None,
         edition_date: Optional[str] = None,
         force_regenerate: bool = False,
+        target_date: Optional[str] = None,
+        user_id: Any = None,
     ) -> NewspaperEditionResponse:
         """Generates and persists a coherent, structured daily edition."""
         target_date_str = (
-            edition_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            edition_date or target_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         )
+        resolved_user = user if user is not None else user_id
+        if hasattr(resolved_user, "id"):
+            target_user_id = resolved_user.id
+        elif isinstance(resolved_user, uuid.UUID):
+            target_user_id = resolved_user
+        elif isinstance(resolved_user, str):
+            target_user_id = uuid.UUID(resolved_user)
+        else:
+            raise ValueError("Valid user or user_id required for newspaper generation.")
+
+        user_id = target_user_id
 
         # Check existing edition
         stmt = select(NewspaperEdition).where(
-            NewspaperEdition.user_id == user.id,
+            NewspaperEdition.user_id == user_id,
             NewspaperEdition.edition_date == target_date_str,
         )
         existing_result = await self.session.execute(stmt)
         existing_edition = existing_result.scalar_one_or_none()
 
         if existing_edition and not force_regenerate:
-            return await self._format_edition_response(existing_edition, user.id)
+            return await self._format_edition_response(existing_edition, user_id)
 
         # 1. Candidate selection & personal relevance
         target_dt = datetime.strptime(target_date_str, "%Y-%m-%d").replace(
             tzinfo=timezone.utc
         )
         candidates = await self.candidate_selector.get_candidate_articles(
-            user_id=user.id,
+            user_id=user_id,
             target_date=target_dt,
         )
 
@@ -135,7 +148,7 @@ class NewspaperGenerationService:
 
         # 3. Editorial scoring
         profile = await self.candidate_selector.personalization_service.get_user_interest_profile(
-            user.id
+            user_id
         )
         scored_candidates = self.editorial_scorer.score_candidates(
             clustered_candidates,
@@ -187,7 +200,7 @@ class NewspaperGenerationService:
             edition_model.generated_at = datetime.now(timezone.utc)
         else:
             edition_model = NewspaperEdition(
-                user_id=user.id,
+                user_id=user_id,
                 edition_date=target_date_str,
                 title=settings.NEWSPAPER_DEFAULT_MASTHEAD,
                 subtitle=subtitle,
@@ -217,7 +230,7 @@ class NewspaperGenerationService:
         await self.session.commit()
 
         # 9. Return structured response
-        return await self.get_edition_by_date(user.id, target_date_str)
+        return await self.get_edition_by_date(user_id, target_date_str)
 
     def _generate_personalized_subtitle(self, top_interests: List[str]) -> str:
         """Creates a subtle, personalized masthead subtitle without exposing private stats."""
