@@ -11,6 +11,8 @@ from app.schemas.interest import (
     UpdateInterestsRequest,
 )
 from app.services.interest_service import InterestService
+from app.learning.agent import InterestLearningAgent
+from app.learning.schemas import UserLearningProfileResponse
 
 router = APIRouter()
 
@@ -25,6 +27,16 @@ def format_interest_response(interest) -> UserInterestResponse:
         created_at=interest.created_at,
         updated_at=interest.updated_at,
     )
+
+@router.get("/profile", response_model=UserLearningProfileResponse)
+async def get_learning_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve explicit vs learned user interest profile with entities and keywords."""
+    agent = InterestLearningAgent(db)
+    return await agent.get_user_learning_profile(current_user.id)
+
 
 @router.get("", response_model=List[UserInterestResponse])
 async def get_my_interests(

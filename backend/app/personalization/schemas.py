@@ -27,6 +27,8 @@ class UserInterestProfile(BaseModel):
     negative_interests: Dict[str, float] = Field(default_factory=dict)  # topic_slug -> interest_score
     topic_names_map: Dict[str, str] = Field(default_factory=dict)       # topic_slug -> topic_name
     topic_ids_map: Dict[str, uuid.UUID] = Field(default_factory=dict)   # topic_slug -> topic_id
+    learned_entities: Dict[str, float] = Field(default_factory=dict)     # entity_name/slug -> score
+    learned_keywords: Dict[str, float] = Field(default_factory=dict)     # keyword -> score
     embedding: Optional[List[float]] = None
     has_interests: bool = False
 

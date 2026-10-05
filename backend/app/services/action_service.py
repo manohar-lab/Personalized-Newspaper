@@ -11,11 +11,14 @@ from app.schemas.action import (
 )
 from app.schemas.article import ArticleBase, TopicSummary
 
+from app.learning.agent import InterestLearningAgent
+
 class ActionService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.action_repo = ActionRepository(session)
         self.article_repo = ArticleRepository(session)
+        self.learning_agent = InterestLearningAgent(session)
 
     async def _validate_article_exists(self, article_id: uuid.UUID):
         article = await self.article_repo.get_article_by_id(article_id, only_published=False)
@@ -32,6 +35,13 @@ class ActionService:
         await self._validate_article_exists(article_id)
         await self.action_repo.add_action(
             user_id=user_id, article_id=article_id, action=ActionType.SAVE.value
+        )
+        # Log learning event
+        await self.learning_agent.process_event(
+            user_id=user_id,
+            event_type="ARTICLE_SAVE",
+            article_id=article_id,
+            commit=True,
         )
         return UserActionResponse(
             success=True,
@@ -61,6 +71,13 @@ class ActionService:
         await self.action_repo.add_action(
             user_id=user_id, article_id=article_id, action=ActionType.LIKE.value
         )
+        # Log learning event
+        await self.learning_agent.process_event(
+            user_id=user_id,
+            event_type="ARTICLE_LIKE",
+            article_id=article_id,
+            commit=True,
+        )
         return UserActionResponse(
             success=True,
             action=ActionType.LIKE.value,
@@ -74,6 +91,13 @@ class ActionService:
         await self._validate_article_exists(article_id)
         await self.action_repo.add_action(
             user_id=user_id, article_id=article_id, action=ActionType.NOT_INTERESTED.value
+        )
+        # Log learning event
+        await self.learning_agent.process_event(
+            user_id=user_id,
+            event_type="ARTICLE_NOT_INTERESTED",
+            article_id=article_id,
+            commit=True,
         )
         return UserActionResponse(
             success=True,

@@ -28,33 +28,57 @@ class UserEmbeddingService:
     def build_user_semantic_text(
         positive_interests: Dict[str, float],
         topic_names_map: Optional[Dict[str, str]] = None,
+        learned_entities: Optional[Dict[str, float]] = None,
+        learned_keywords: Optional[Dict[str, float]] = None,
     ) -> str:
-        """Construct structured semantic string from user's positive topic interests.
-        
-        Example output:
-            "USER INTERESTS: Artificial Intelligence (0.95), Machine Learning (0.90), Programming (0.85)"
-        """
-        if not positive_interests:
+        """Construct structured semantic string from user's positive topic interests, learned entities, and keywords."""
+        if not positive_interests and not learned_entities and not learned_keywords:
             return ""
 
-        parts = []
-        # Sort by interest score descending
-        sorted_items = sorted(positive_interests.items(), key=lambda x: x[1], reverse=True)
-        for slug, score in sorted_items:
-            display_name = (topic_names_map.get(slug) if topic_names_map else None) or slug.replace("-", " ").title()
-            parts.append(f"{display_name} ({score:.2f})")
+        sections = []
 
-        return f"USER INTEREST PROFILE: {', '.join(parts)}"
+        # 1. Positive & Learned Topics
+        if positive_interests:
+            topic_parts = []
+            sorted_topics = sorted(positive_interests.items(), key=lambda x: x[1], reverse=True)
+            for slug, score in sorted_topics:
+                display_name = (topic_names_map.get(slug) if topic_names_map else None) or slug.replace("-", " ").title()
+                topic_parts.append(f"{display_name} ({score:.2f})")
+            sections.append(f"TOPICS: {', '.join(topic_parts)}")
+
+        # 2. Learned Entities
+        if learned_entities:
+            ent_parts = []
+            sorted_ents = sorted(learned_entities.items(), key=lambda x: x[1], reverse=True)
+            for name, score in sorted_ents:
+                if score >= 0.55:
+                    ent_parts.append(f"{name} ({score:.2f})")
+            if ent_parts:
+                sections.append(f"ENTITIES: {', '.join(ent_parts)}")
+
+        # 3. Learned Keywords
+        if learned_keywords:
+            kw_parts = []
+            sorted_kws = sorted(learned_keywords.items(), key=lambda x: x[1], reverse=True)
+            for kw, score in sorted_kws:
+                if score >= 0.55:
+                    kw_parts.append(f"{kw} ({score:.2f})")
+            if kw_parts:
+                sections.append(f"KEYWORDS: {', '.join(kw_parts)}")
+
+        return "USER INTEREST PROFILE:\n" + "\n".join(sections)
 
     async def get_or_create_user_embedding(
         self,
         user_id: uuid.UUID,
         positive_interests: Dict[str, float],
         topic_names_map: Optional[Dict[str, str]] = None,
+        learned_entities: Optional[Dict[str, float]] = None,
+        learned_keywords: Optional[Dict[str, float]] = None,
         force_refresh: bool = False,
     ) -> Optional[List[float]]:
         """Retrieve cached user embedding or generate and persist a new one."""
-        if not positive_interests:
+        if not positive_interests and not learned_entities and not learned_keywords:
             return None
 
         embedding_version = settings.ANALYSIS_VERSION
@@ -71,7 +95,12 @@ class UserEmbeddingService:
                 return cached.embedding
 
         # 2. Generate embedding from weighted profile text
-        semantic_text = self.build_user_semantic_text(positive_interests, topic_names_map)
+        semantic_text = self.build_user_semantic_text(
+            positive_interests=positive_interests,
+            topic_names_map=topic_names_map,
+            learned_entities=learned_entities,
+            learned_keywords=learned_keywords,
+        )
         if not semantic_text:
             return None
 

@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.article import Article
 from app.models.topic import Topic
 from app.models.interest import UserInterest
+from app.learning.models import UserEntityInterest, UserKeywordInterest
 from app.repositories.article_repository import ArticleRepository
 from app.repositories.action_repository import ActionRepository
 from app.schemas.article import ArticleBase, TopicSummary
@@ -47,7 +48,8 @@ class PersonalizationService:
         self.scorer = RelevanceScorer()
 
     async def get_user_interest_profile(self, user_id: uuid.UUID) -> UserInterestProfile:
-        """Fetch user explicit interests and cached semantic embedding vector."""
+        """Fetch user explicit and learned interests, entities, keywords, and cached semantic embedding vector."""
+        # 1. Topic Interests (Explicit + Learned Topics)
         stmt = (
             select(UserInterest)
             .options(selectinload(UserInterest.topic))
@@ -72,14 +74,40 @@ class PersonalizationService:
             elif ui.preference_type == "NEGATIVE":
                 negative_interests[slug] = float(ui.interest_score)
 
-        has_interests = bool(positive_interests or negative_interests)
+        # 2. Learned Entities
+        stmt_ent = (
+            select(UserEntityInterest)
+            .options(selectinload(UserEntityInterest.entity))
+            .where(UserEntityInterest.user_id == user_id)
+        )
+        res_ent = await self.session.execute(stmt_ent)
+        learned_entities = {
+            ei.entity.normalized_name: ei.score
+            for ei in res_ent.scalars().all()
+        }
 
+        # 3. Learned Keywords
+        stmt_kw = (
+            select(UserKeywordInterest)
+            .where(UserKeywordInterest.user_id == user_id)
+        )
+        res_kw = await self.session.execute(stmt_kw)
+        learned_keywords = {
+            ki.keyword: ki.score
+            for ki in res_kw.scalars().all()
+        }
+
+        has_interests = bool(positive_interests or negative_interests or learned_entities or learned_keywords)
+
+        # 4. Composite Embedding
         user_embedding: Optional[List[float]] = None
-        if positive_interests:
+        if has_interests:
             user_embedding = await self.user_embedding_service.get_or_create_user_embedding(
                 user_id=user_id,
                 positive_interests=positive_interests,
                 topic_names_map=topic_names_map,
+                learned_entities=learned_entities,
+                learned_keywords=learned_keywords,
             )
 
         return UserInterestProfile(
@@ -88,6 +116,8 @@ class PersonalizationService:
             negative_interests=negative_interests,
             topic_names_map=topic_names_map,
             topic_ids_map=topic_ids_map,
+            learned_entities=learned_entities,
+            learned_keywords=learned_keywords,
             embedding=user_embedding,
             has_interests=has_interests,
         )

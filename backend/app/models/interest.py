@@ -31,12 +31,13 @@ class UserInterest(Base):
         index=True,
     )
     interest_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.8)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     preference_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="POSITIVE"
     )  # POSITIVE | NEGATIVE
     source: Mapped[str] = mapped_column(
         String(20), nullable=False, default="ONBOARDING"
-    )  # ONBOARDING | USER_ACTION | AGENT | SYSTEM
+    )  # ONBOARDING | USER_ACTION | AGENT | SYSTEM | LEARNED | HYBRID
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

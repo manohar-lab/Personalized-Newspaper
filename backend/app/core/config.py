@@ -60,6 +60,24 @@ class Settings(BaseSettings):
     PERSONALIZATION_DIVERSITY_PENALTY: float = Field(default=0.15)
     PERSONALIZATION_MAX_CONSECUTIVE_SAME_TOPIC: int = Field(default=1)
 
+    # Automatic Interest Learning Engine Configuration
+    WEIGHT_ARTICLE_OPEN: float = Field(default=0.05)
+    WEIGHT_ARTICLE_READ: float = Field(default=0.10)
+    WEIGHT_ARTICLE_COMPLETE: float = Field(default=0.20)
+    WEIGHT_ARTICLE_LIKE: float = Field(default=0.35)
+    WEIGHT_ARTICLE_SAVE: float = Field(default=0.30)
+    WEIGHT_ARTICLE_SHARE: float = Field(default=0.30)
+    WEIGHT_ARTICLE_NOT_INTERESTED: float = Field(default=-0.40)
+    WEIGHT_ARTICLE_SKIP: float = Field(default=-0.05)
+    WEIGHT_ARTICLE_IMPRESSION: float = Field(default=0.00)
+
+    # Learning Hyperparameters
+    INTEREST_LEARNING_RATE: float = Field(default=0.05)
+    INTEREST_BEHAVIOR_HALF_LIFE_DAYS: float = Field(default=30.0)
+    MIN_INTEREST_CONFIDENCE: float = Field(default=0.10)
+    MAX_INTEREST_CONFIDENCE: float = Field(default=0.95)
+    CONFIDENCE_GROWTH_RATE: float = Field(default=0.05)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"
