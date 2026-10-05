@@ -78,6 +78,23 @@ class Settings(BaseSettings):
     MAX_INTEREST_CONFIDENCE: float = Field(default=0.95)
     CONFIDENCE_GROWTH_RATE: float = Field(default=0.05)
 
+    # Newspaper Generation Engine Configuration
+    NEWSPAPER_PRIMARY_WINDOW_HOURS: int = Field(default=24)
+    NEWSPAPER_FALLBACK_WINDOW_HOURS: int = Field(default=72)
+    NEWSPAPER_EDITORIAL_RELEVANCE_WEIGHT: float = Field(default=0.60)
+    NEWSPAPER_EDITORIAL_IMPORTANCE_WEIGHT: float = Field(default=0.15)
+    NEWSPAPER_EDITORIAL_RECENCY_WEIGHT: float = Field(default=0.15)
+    NEWSPAPER_EDITORIAL_TOPIC_CONF_WEIGHT: float = Field(default=0.10)
+    NEWSPAPER_MAX_TOTAL_STORIES: int = Field(default=25)
+    NEWSPAPER_LEAD_STORIES: int = Field(default=1)
+    NEWSPAPER_FEATURE_STORIES: int = Field(default=4)
+    NEWSPAPER_STANDARD_STORIES: int = Field(default=12)
+    NEWSPAPER_COMPACT_STORIES: int = Field(default=8)
+    NEWSPAPER_MAX_CONSECUTIVE_SAME_TOPIC: int = Field(default=2)
+    NEWSPAPER_ENTITY_REPEAT_PENALTY: float = Field(default=0.10)
+    NEWSPAPER_CLUSTER_SIMILARITY_THRESHOLD: float = Field(default=0.85)
+    NEWSPAPER_DEFAULT_MASTHEAD: str = Field(default="YOUR DAILY")
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

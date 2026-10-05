@@ -1,0 +1,159 @@
+"""models.py — Phase 9 Persistent Newspaper Editions & Story Clusters Models."""
+import uuid
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, List, Optional
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UUID,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.article import Article
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class NewspaperEdition(Base):
+    __tablename__ = "newspaper_editions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    edition_date: Mapped[str] = mapped_column(
+        String(10), index=True, nullable=False
+    )  # YYYY-MM-DD
+    title: Mapped[str] = mapped_column(
+        String(255), default="YOUR DAILY", nullable=False
+    )
+    subtitle: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(30), default="READY", index=True, nullable=False
+    )  # GENERATING | READY | FAILED
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+
+    user: Mapped["User"] = relationship("User", backref="newspaper_editions")
+    stories: Mapped[List["NewspaperStory"]] = relationship(
+        "NewspaperStory",
+        back_populates="edition",
+        cascade="all, delete-orphan",
+        order_by="NewspaperStory.position",
+    )
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "edition_date", name="uq_user_edition_date"),
+    )
+
+
+class NewspaperStory(Base):
+    __tablename__ = "newspaper_stories"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    edition_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("newspaper_editions.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    section: Mapped[str] = mapped_column(
+        String(100), default="TOP STORIES", index=True, nullable=False
+    )  # TOP STORIES | TECHNOLOGY | SCIENCE | BUSINESS | WORLD | HEALTH | SPORTS | ENTERTAINMENT | OTHER
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    layout_type: Mapped[str] = mapped_column(
+        String(30), default="STANDARD", nullable=False
+    )  # LEAD | FEATURE | STANDARD | COMPACT
+    editorial_score: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
+    is_lead: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    personalization_reason: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    display_headline: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    edition: Mapped["NewspaperEdition"] = relationship(
+        "NewspaperEdition", back_populates="stories"
+    )
+    article: Mapped["Article"] = relationship(
+        "Article", backref="newspaper_story_placements"
+    )
+
+
+class StoryCluster(Base):
+    __tablename__ = "story_clusters"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    cluster_key: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False
+    )
+
+    articles: Mapped[List["StoryClusterArticle"]] = relationship(
+        "StoryClusterArticle", back_populates="cluster", cascade="all, delete-orphan"
+    )
+
+
+class StoryClusterArticle(Base):
+    __tablename__ = "story_cluster_articles"
+
+    cluster_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("story_clusters.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    similarity_score: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    cluster: Mapped["StoryCluster"] = relationship(
+        "StoryCluster", back_populates="articles"
+    )
+    article: Mapped["Article"] = relationship("Article")

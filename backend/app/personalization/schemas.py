@@ -3,7 +3,7 @@
 Data structures for score breakdowns, user profile contexts, and ranking results.
 """
 import uuid
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -40,3 +40,4 @@ class ScoredArticle(BaseModel):
     article_id: uuid.UUID
     relevance_score: float
     breakdown: RelevanceScoreBreakdown
+    article: Optional[Any] = None

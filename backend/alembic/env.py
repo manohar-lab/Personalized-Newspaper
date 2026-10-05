@@ -21,6 +21,12 @@ from app.learning.models import (
     UserEntityInterest,
     UserKeywordInterest,
 )
+from app.newspaper.models import (
+    NewspaperEdition,
+    NewspaperStory,
+    StoryCluster,
+    StoryClusterArticle,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

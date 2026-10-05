@@ -164,3 +164,51 @@ export interface SavedArticlesListResponse {
   limit: number;
   total_pages: number;
 }
+
+export type StoryLayoutType = "LEAD" | "FEATURE" | "STANDARD" | "COMPACT";
+
+export interface NewspaperStoryResponse {
+  id: string;
+  article_id: string;
+  title: string;
+  original_headline: string;
+  summary?: string | null;
+  content?: string | null;
+  url: string;
+  top_image_url?: string | null;
+  author?: string | null;
+  source_name: string;
+  published_at?: string | null;
+  section: string;
+  position: number;
+  layout_type: StoryLayoutType;
+  editorial_score: number;
+  is_lead: boolean;
+  personalization_reason?: string | null;
+  primary_category?: string | null;
+  topics: string[];
+  reading_time_minutes: number;
+  is_saved: boolean;
+  is_liked: boolean;
+  is_read: boolean;
+}
+
+export interface NewspaperSectionResponse {
+  name: string;
+  display_name: string;
+  stories: NewspaperStoryResponse[];
+  story_count: number;
+}
+
+export interface NewspaperEditionResponse {
+  id: string;
+  user_id: string;
+  edition_date: string;
+  title: string;
+  subtitle?: string | null;
+  status: string;
+  generated_at: string;
+  lead_story?: NewspaperStoryResponse | null;
+  sections: NewspaperSectionResponse[];
+  total_stories: number;
+}

@@ -2,9 +2,8 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
-import { CurationBanner } from "@/components/CurationBanner";
-import { FeaturedArticle } from "@/components/FeaturedArticle";
-import { ArticleSection } from "@/components/ArticleSection";
+import { EditionStoryCard } from "@/components/EditionStoryCard";
+import { EditionSection } from "@/components/EditionSection";
 import { NewspaperSkeleton } from "@/components/NewspaperSkeleton";
 import { EmptyNewspaperState } from "@/components/EmptyNewspaperState";
 import { AuthModal } from "@/components/AuthModal";
@@ -13,17 +12,18 @@ import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
 import {
   fetchCurrentUser,
-  fetchPersonalizedNewspaper,
-  fetchArticles,
-  fetchFeaturedArticle,
+  fetchTodayEdition,
+  regenerateTodayEdition,
 } from "@/lib/api";
-import { User, NewspaperResponse, Article, TopicSummary } from "@/types";
+import { User, NewspaperEditionResponse } from "@/types";
+import { RefreshCw, Sparkles, Calendar, Layers } from "lucide-react";
 
 export default function NewspaperPage() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [newspaperData, setNewspaperData] = useState<NewspaperResponse | null>(null);
+  const [edition, setEdition] = useState<NewspaperEditionResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [regenerating, setRegenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -36,85 +36,46 @@ export default function NewspaperPage() {
     const savedToken = localStorage.getItem("pn_auth_token");
     if (savedToken) {
       setToken(savedToken);
-      loadUserAndNewspaper(savedToken);
+      loadUserAndEdition(savedToken);
     } else {
-      loadPublicNewspaper();
+      setLoading(false);
+      setShowAuthModal(true);
     }
   }, []);
 
-  const loadUserAndNewspaper = async (authToken: string) => {
+  const loadUserAndEdition = async (authToken: string) => {
     setLoading(true);
     setError(null);
     try {
       const u = await fetchCurrentUser(authToken);
       setUser(u);
-      const data = await fetchPersonalizedNewspaper(authToken);
-      setNewspaperData(data);
+      const ed = await fetchTodayEdition(authToken);
+      setEdition(ed);
     } catch (err: any) {
-      console.warn("Personalized fetch error, falling back to public feed:", err);
-      // If token invalid, clear it
+      console.warn("Error fetching newspaper edition:", err);
       if (err?.message?.includes("credentials") || err?.message?.includes("401")) {
         localStorage.removeItem("pn_auth_token");
         setToken(null);
         setUser(null);
+        setShowAuthModal(true);
+      } else {
+        setError(err?.message || "Failed to load newspaper edition");
       }
-      await loadPublicNewspaper();
     } finally {
       setLoading(false);
     }
   };
 
-  const loadPublicNewspaper = async () => {
-    setLoading(true);
-    setError(null);
+  const handleRegenerate = async () => {
+    if (!token) return;
+    setRegenerating(true);
     try {
-      const articlesResp = await fetchArticles({ limit: 20 });
-      const featured = articlesResp.items.length > 0 ? articlesResp.items[0] : null;
-
-      // Group articles by topic
-      const topicMap = new Map<string, { topic: TopicSummary; articles: Article[] }>();
-      for (const art of articlesResp.items) {
-        for (const t of art.topics) {
-          if (!topicMap.has(t.slug)) {
-            topicMap.set(t.slug, { topic: t, articles: [] });
-          }
-          topicMap.get(t.slug)!.articles.push(art);
-        }
-      }
-
-      const sections = Array.from(topicMap.values()).map((v) => ({
-        topic: v.topic,
-        total_articles: v.articles.length,
-        articles: v.articles,
-      }));
-
-      const todayStr = new Date().toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
-      setNewspaperData({
-        edition: {
-          date: todayStr,
-          title: "The Personalized Chronicle",
-          subtitle: "General Public Edition",
-        },
-        user: {
-          id: "guest",
-          name: "Guest Reader",
-          email: "",
-        },
-        curation_summary: "Welcome to the digital newspaper. Sign in to curate your edition.",
-        has_interests: false,
-        featured_article: featured,
-        sections,
-      });
+      const refreshed = await regenerateTodayEdition(token);
+      setEdition(refreshed);
     } catch (err: any) {
-      setError(err?.message || "Failed to load newspaper edition");
+      alert("Failed to regenerate edition: " + (err?.message || "Server error"));
     } finally {
-      setLoading(false);
+      setRegenerating(false);
     }
   };
 
@@ -123,60 +84,81 @@ export default function NewspaperPage() {
     setToken(newToken);
     setUser(newUser);
     setShowAuthModal(false);
-    loadUserAndNewspaper(newToken);
+    loadUserAndEdition(newToken);
   };
 
   const handleSignOut = () => {
     localStorage.removeItem("pn_auth_token");
     setToken(null);
     setUser(null);
-    loadPublicNewspaper();
+    setEdition(null);
+    setShowAuthModal(true);
   };
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
     if (token) {
-      loadUserAndNewspaper(token);
+      handleRegenerate();
     }
   };
 
   const handleActionComplete = (action: string, articleId: string) => {
-    if (action === "NOT_INTERESTED" && newspaperData) {
-      // Remove story from sections and lead in state
-      const updatedSections = newspaperData.sections.map((sec) => ({
+    if (action === "NOT_INTERESTED" && edition) {
+      // Remove story from sections and lead in local state
+      const updatedSections = edition.sections.map((sec) => ({
         ...sec,
-        articles: sec.articles.filter((a) => a.id !== articleId),
-      })).filter((sec) => sec.articles.length > 0);
+        stories: sec.stories.filter((s) => s.article_id !== articleId),
+        story_count: sec.stories.filter((s) => s.article_id !== articleId).length,
+      })).filter((sec) => sec.stories.length > 0);
 
-      const updatedFeatured =
-        newspaperData.featured_article?.id === articleId
-          ? null
-          : newspaperData.featured_article;
+      const updatedLead =
+        edition.lead_story?.article_id === articleId ? null : edition.lead_story;
 
-      setNewspaperData({
-        ...newspaperData,
-        featured_article: updatedFeatured,
+      setEdition({
+        ...edition,
+        lead_story: updatedLead,
         sections: updatedSections,
+        total_stories: Math.max(0, edition.total_stories - 1),
       });
     }
   };
 
-  // Filter sections by search query if user typed search
+  // Filter sections by search query
   const filteredSections = useMemo(() => {
-    if (!newspaperData || !searchQuery.trim()) return newspaperData?.sections || [];
+    if (!edition || !searchQuery.trim()) return edition?.sections || [];
     const q = searchQuery.toLowerCase();
-    return newspaperData.sections
+    return edition.sections
       .map((sec) => ({
         ...sec,
-        articles: sec.articles.filter(
-          (a) =>
-            a.title.toLowerCase().includes(q) ||
-            a.description?.toLowerCase().includes(q) ||
-            a.topics.some((t) => t.name.toLowerCase().includes(q))
+        stories: sec.stories.filter(
+          (s) =>
+            s.title.toLowerCase().includes(q) ||
+            s.summary?.toLowerCase().includes(q) ||
+            s.topics.some((t) => t.toLowerCase().includes(q))
         ),
       }))
-      .filter((sec) => sec.articles.length > 0);
-  }, [newspaperData, searchQuery]);
+      .filter((sec) => sec.stories.length > 0);
+  }, [edition, searchQuery]);
+
+  const formattedDate = useMemo(() => {
+    if (!edition?.edition_date) {
+      return new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+    const [year, month, day] = edition.edition_date.split("-").map(Number);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    return d.toLocaleDateString("en-US", {
+      timeZone: "UTC",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }, [edition?.edition_date]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF8F5] text-[#181615]">
@@ -193,15 +175,50 @@ export default function NewspaperPage() {
           onSearchChange={setSearchQuery}
         />
 
-        {/* Curation Top Greeting Banner */}
-        {user && newspaperData && (
-          <CurationBanner
-            userName={user.full_name || user.email.split("@")[0]}
-            curationSummary={newspaperData.curation_summary}
-            hasInterests={newspaperData.has_interests}
-            onEditInterests={() => setShowInterestsModal(true)}
-            onOpenOnboarding={() => setShowOnboarding(true)}
-          />
+        {/* Masthead Banner & Subtitle */}
+        {edition && (
+          <div className="bg-[#F3EFE6] border-b border-[#E0D8C8]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#7A7268]">
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{formattedDate}</span>
+                  <span>•</span>
+                  <span>{edition.title || "YOUR DAILY"}</span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5" />
+                    {edition.total_stories} stories
+                  </span>
+                </div>
+                {edition.subtitle && (
+                  <p className="font-editorial-body text-sm text-[#4E473F] mt-1 italic">
+                    {edition.subtitle}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRegenerate}
+                  disabled={regenerating}
+                  className="px-3.5 py-1.5 bg-white hover:bg-[#FAF8F5] border border-[#181615] text-[#181615] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                  title="Regenerate today's edition with updated interests"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? "animate-spin" : ""}`} />
+                  <span>{regenerating ? "Regenerating..." : "Regenerate"}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowInterestsModal(true)}
+                  className="px-3.5 py-1.5 bg-[#181615] hover:bg-[#8C2524] text-[#FAF8F5] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Edit Interests</span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Main Content Area */}
@@ -212,34 +229,30 @@ export default function NewspaperPage() {
             <EmptyNewspaperState
               type="error"
               errorMessage={error}
-              onRetry={() => (token ? loadUserAndNewspaper(token) : loadPublicNewspaper())}
+              onRetry={() => (token ? loadUserAndEdition(token) : setShowAuthModal(true))}
             />
-          ) : user && !newspaperData?.has_interests ? (
-            <EmptyNewspaperState
-              type="no_interests"
-              onOpenOnboarding={() => setShowOnboarding(true)}
-            />
-          ) : !newspaperData?.featured_article && filteredSections.length === 0 ? (
+          ) : !edition?.lead_story && filteredSections.length === 0 ? (
             <EmptyNewspaperState
               type="no_articles"
-              onRetry={() => (token ? loadUserAndNewspaper(token) : loadPublicNewspaper())}
+              onRetry={() => (token ? loadUserAndEdition(token) : setShowAuthModal(true))}
             />
           ) : (
             <>
-              {/* Lead Story */}
-              {newspaperData?.featured_article && !searchQuery && (
-                <FeaturedArticle
-                  article={newspaperData.featured_article}
+              {/* User-Specific Lead Story */}
+              {edition?.lead_story && !searchQuery && (
+                <EditionStoryCard
+                  story={edition.lead_story}
                   token={token}
+                  layout="LEAD"
                   onActionComplete={handleActionComplete}
                 />
               )}
 
-              {/* Dynamic News Sections based on user's interests */}
+              {/* Controlled Editorial Sections */}
               <div className="mt-8">
                 {filteredSections.map((sec) => (
-                  <ArticleSection
-                    key={sec.topic.slug}
+                  <EditionSection
+                    key={sec.name}
                     section={sec}
                     token={token}
                     onActionComplete={handleActionComplete}
@@ -265,7 +278,7 @@ export default function NewspaperPage() {
           isOpen={showInterestsModal}
           onClose={() => {
             setShowInterestsModal(false);
-            if (token) loadUserAndNewspaper(token);
+            if (token) loadUserAndEdition(token);
           }}
           token={token}
         />
