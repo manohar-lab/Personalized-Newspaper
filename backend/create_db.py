@@ -2,7 +2,7 @@ import asyncio
 import asyncpg
 
 async def main():
-    conn = await asyncpg.connect("postgresql://postgres:postgres@localhost:5432/postgres")
+    conn = await asyncpg.connect("postgresql://postgres:postgres@127.0.0.1:5432/postgres")
     dbs = await conn.fetch("SELECT datname FROM pg_database WHERE datname = 'personalized_newspaper'")
     if not dbs:
         print("Creating database personalized_newspaper...")

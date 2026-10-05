@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>AI &amp; Science Dispatch</title>
+  <subtitle>Emerging trends in foundational intelligence and scientific discovery</subtitle>
+  <link href="https://aiscience.example.com" />
+  <link href="https://aiscience.example.com/atom.xml" rel="self" />
+  <updated>2026-10-05T03:00:00Z</updated>
+  <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+  <entry>
+    <title>Sparse Attention Mechanisms Yield 10x Efficiency in Long-Context Reasoning</title>
+    <link href="https://aiscience.example.com/posts/sparse-attention?utm_campaign=october&amp;utm_source=atom" rel="alternate" type="text/html"/>
+    <id>https://aiscience.example.com/posts/sparse-attention</id>
+    <updated>2026-10-05T02:45:00+00:00</updated>
+    <published>2026-10-05T02:00:00+00:00</published>
+    <summary type="html">&lt;p&gt;New hierarchical sparse block architectures reduce quadratic memory complexity to sub-linear runtime during long document generation.&lt;/p&gt;</summary>
+    <author>
+      <name>Sarah Jenkins</name>
+      <email>sarah@example.com</email>
+    </author>
+  </entry>
+</feed>

@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = Field(default="http://localhost:3000")
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+    # Ingestion Configuration
+    USER_AGENT: str = Field(
+        default="PersonalizedNewspaperBot/1.0 (+https://github.com/manohar-lab/Personalized-Newspaper)"
+    )
+    FEED_FETCH_TIMEOUT_SECONDS: int = Field(default=15)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Tech Universe Feed</title>
+    <link>https://techuniverse.example.com</link>
+    <description>The latest technology innovations and computing breakthroughs</description>
+    <language>en</language>
+    <item>
+      <title>Next-Gen Quantum Processing Unit Achieves Superconducting Milestone</title>
+      <link>https://techuniverse.example.com/articles/quantum-breakthrough?utm_source=rss&amp;utm_medium=feed#comments</link>
+      <description><![CDATA[Researchers have successfully stabilized a 128-qubit superconducting quantum processor with sub-millisecond coherence.]]></description>
+      <dc:creator>Dr. Elena Rostova</dc:creator>
+      <pubDate>Mon, 05 Oct 2026 04:00:00 GMT</pubDate>
+      <media:content url="https://techuniverse.example.com/images/quantum.jpg" type="image/jpeg" medium="image" />
+      <guid isPermaLink="true">https://techuniverse.example.com/articles/quantum-breakthrough</guid>
+    </item>
+    <item>
+      <title>Autonomous Systems Adopt Lightweight Embedded Vision Models</title>
+      <link>https://techuniverse.example.com/articles/embedded-vision-models?ref=feed</link>
+      <description><![CDATA[TinyML innovations enable real-time object classification on edge devices under 500mW power budget.]]></description>
+      <author>alex.chen@example.com (Alex Chen)</author>
+      <pubDate>Sun, 04 Oct 2026 18:30:00 +0000</pubDate>
+      <enclosure url="https://techuniverse.example.com/images/tinyml.png" type="image/png" length="12345" />
+      <guid isPermaLink="false">article-tinyml-2026-10-04</guid>
+    </item>
+  </channel>
+</rss>

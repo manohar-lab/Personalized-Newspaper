@@ -21,7 +21,8 @@ async def test_article_listing_and_pagination():
         # Check published-only: ensure no DRAFT or ARCHIVED
         for item in data["items"]:
             assert item["status"] == "PUBLISHED"
-            assert item["title"].startswith("[DEMO]")
+            assert item["title"] is not None
+            assert len(item["title"]) > 0
 
 @pytest.mark.asyncio
 async def test_topic_filtering():
@@ -67,7 +68,8 @@ async def test_article_detail_and_related():
         assert detail_resp.status_code == 200
         detail_data = detail_resp.json()
         assert detail_data["id"] == art_id
-        assert detail_data["content"] is not None
+        assert detail_data["title"] is not None
+        assert detail_data["description"] is not None or detail_data["content"] is not None
         assert "related_articles" in detail_data
         assert isinstance(detail_data["related_articles"], list)
         for rel in detail_data["related_articles"]:

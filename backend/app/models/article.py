@@ -8,6 +8,8 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.topic import Topic
     from app.models.action import UserArticleAction
+    from app.models.source import NewsSource
+    from app.models.feed import NewsFeed
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -45,8 +47,26 @@ class Article(Base):
     )
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("news_sources.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    feed_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("news_feeds.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     source_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    canonical_url: Mapped[Optional[str]] = mapped_column(
+        String(1024), index=True, nullable=True
+    )
+    ingestion_method: Mapped[str] = mapped_column(
+        String(20), default="MANUAL", index=True, nullable=False
+    )  # RSS | SCRAPER | API | MANUAL
     author: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     published_at: Mapped[datetime] = mapped_column(
@@ -78,4 +98,10 @@ class Article(Base):
     )
     actions: Mapped[List["UserArticleAction"]] = relationship(
         "UserArticleAction", back_populates="article", cascade="all, delete-orphan"
+    )
+    source: Mapped[Optional["NewsSource"]] = relationship(
+        "NewsSource", back_populates="articles"
+    )
+    feed: Mapped[Optional["NewsFeed"]] = relationship(
+        "NewsFeed", back_populates="articles"
     )

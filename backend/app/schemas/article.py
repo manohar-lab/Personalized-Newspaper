@@ -20,6 +20,10 @@ class ArticleBase(BaseModel):
     content: Optional[str] = None
     source_name: Optional[str] = None
     source_url: Optional[str] = None
+    canonical_url: Optional[str] = None
+    source_id: Optional[uuid.UUID] = None
+    feed_id: Optional[uuid.UUID] = None
+    ingestion_method: str = "MANUAL"
     author: Optional[str] = None
     image_url: Optional[str] = None
     published_at: datetime

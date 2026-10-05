@@ -80,6 +80,10 @@ export interface Article {
   content?: string | null;
   source_name?: string | null;
   source_url?: string | null;
+  canonical_url?: string | null;
+  source_id?: string | null;
+  feed_id?: string | null;
+  ingestion_method?: "RSS" | "SCRAPER" | "API" | "MANUAL";
   author?: string | null;
   image_url?: string | null;
   published_at: string;

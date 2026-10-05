@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     articles,
     newspaper,
     users,
+    news,
 )
 
 api_v1_router = APIRouter()
@@ -20,4 +21,6 @@ api_v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["Onb
 api_v1_router.include_router(articles.router, prefix="/articles", tags=["Articles"])
 api_v1_router.include_router(newspaper.router, prefix="/newspaper", tags=["Newspaper"])
 api_v1_router.include_router(users.router, prefix="/users/me", tags=["Users"])
+api_v1_router.include_router(news.router, prefix="/news", tags=["News"])
+
 

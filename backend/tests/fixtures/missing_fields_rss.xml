@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Minimal Feed</title>
+    <link>https://minimal.example.com</link>
+    <description>Testing missing optional fields</description>
+    <!-- Entry 1: Missing author, missing image, missing pubDate -->
+    <item>
+      <title>Autonomous Drones Complete Arctic Mapping Mission</title>
+      <link>https://minimal.example.com/drones-arctic</link>
+      <description>Unmanned aerial vehicles successfully mapped ice sheet topology.</description>
+    </item>
+    <!-- Entry 2: Missing title (should be skipped) -->
+    <item>
+      <link>https://minimal.example.com/missing-title</link>
+      <description>Item without title.</description>
+    </item>
+    <!-- Entry 3: Missing link (should be skipped) -->
+    <item>
+      <title>Item without Link</title>
+      <description>No URL present.</description>
+    </item>
+  </channel>
+</rss>

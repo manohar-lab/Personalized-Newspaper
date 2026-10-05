@@ -224,13 +224,15 @@ export default function ArticlePage() {
             </div>
           ) : (
             <article>
-              {/* Demo Development Notice Banner */}
-              <div className="mb-6 p-3 bg-amber-50 border border-amber-300 rounded-sm flex items-start gap-2.5 text-xs text-amber-900 font-sans">
-                <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="font-semibold">Development / Demo Article:</strong> This is a sample editorial piece for testing the Personalized Newspaper reading experience and topic classification. Real scraping pipelines will run in Phase 4.
+              {/* Ingestion / Demo Notice Banner */}
+              {article.ingestion_method === "MANUAL" && (
+                <div className="mb-6 p-3 bg-amber-50 border border-amber-300 rounded-sm flex items-start gap-2.5 text-xs text-amber-900 font-sans">
+                  <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-semibold">Development / Demo Article:</strong> This is a sample editorial piece for testing the Personalized Newspaper reading experience and topic classification.
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Topics Tags */}
               <div className="flex flex-wrap gap-2 mb-3">
@@ -326,9 +328,9 @@ export default function ArticlePage() {
                 </div>
               )}
 
-              {/* Article Editorial Body */}
-              <div className="editorial-prose max-w-none mb-12 dropcap">
-                {article.content ? (
+              {/* Article Content Section: Full Text Available vs Excerpt */}
+              {article.is_full_text_available && article.content ? (
+                <div className="editorial-prose max-w-none mb-12 dropcap">
                   <div
                     dangerouslySetInnerHTML={{
                       __html: article.content
@@ -340,10 +342,37 @@ export default function ArticlePage() {
                         .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>"),
                     }}
                   />
-                ) : (
-                  <p>{article.description}</p>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="mb-12 space-y-6">
+                  <div className="p-6 sm:p-8 bg-[#F5EFEB] border border-[#DCD3C7] rounded-sm">
+                    <h3 className="font-editorial-heading font-bold text-xl text-[#181615] mb-3">
+                      Story Excerpt & Summary
+                    </h3>
+                    <p className="font-editorial-body text-base sm:text-lg text-[#3C3630] leading-relaxed mb-6">
+                      {article.description || "No full summary provided for this feed entry."}
+                    </p>
+
+                    <div className="pt-4 border-t border-[#E4DCCF] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans">
+                      <div className="text-xs text-[#7A7268]">
+                        Curated via {article.source_name || "publisher"} RSS feed.
+                      </div>
+
+                      {(article.canonical_url || article.source_url) && (
+                        <a
+                          href={article.canonical_url || article.source_url || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#8C2524] text-white text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#6E1C1B] transition-colors shadow-sm"
+                        >
+                          <span>Read Full Story on {article.source_name || "Original Publisher"}</span>
+                          <span className="text-sm">→</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Sticky / Dedicated Action Bar */}
               <div className="bg-[#F5EFEB] border-2 border-[#181615] p-6 mb-16 flex flex-col sm:flex-row items-center justify-between gap-4 font-sans">

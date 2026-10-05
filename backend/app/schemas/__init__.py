@@ -29,6 +29,19 @@ from app.schemas.action import (
     SavedArticleItem,
     SavedArticlesListResponse,
 )
+from app.schemas.news import (
+    SourceBase,
+    SourceCreate,
+    SourceResponse,
+    FeedBase,
+    FeedCreate,
+    FeedResponse,
+    FeedTestResponse,
+    FeedTestSampleArticle,
+    IngestionRunResponse,
+    IngestionSummary,
+    IngestionBatchResponse,
+)
 
 __all__ = [
     "UserRegister",
@@ -52,5 +65,17 @@ __all__ = [
     "UserActionResponse",
     "SavedArticleItem",
     "SavedArticlesListResponse",
+    "SourceBase",
+    "SourceCreate",
+    "SourceResponse",
+    "FeedBase",
+    "FeedCreate",
+    "FeedResponse",
+    "FeedTestResponse",
+    "FeedTestSampleArticle",
+    "IngestionRunResponse",
+    "IngestionSummary",
+    "IngestionBatchResponse",
 ]
+
 

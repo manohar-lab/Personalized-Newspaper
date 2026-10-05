@@ -9,6 +9,7 @@ from app.api.v1.router import api_v1_router
 from app.database.session import AsyncSessionLocal
 from app.database.seed_topics import seed_topics
 from app.database.seed_articles import seed_articles
+from app.database.seed_feeds import seed_sources_and_feeds
 
 
 @asynccontextmanager
@@ -19,6 +20,7 @@ async def lifespan(app: FastAPI):
     try:
         async with AsyncSessionLocal() as session:
             await seed_topics(session)
+            await seed_sources_and_feeds(session)
             await seed_articles(session)
     except Exception as e:
         logger.warning(f"Startup seed error: {e}")
