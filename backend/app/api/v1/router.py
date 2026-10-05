@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     behavior,
     reading,
     admin_pipeline,
+    search,
 )
 
 api_v1_router = APIRouter()
@@ -29,5 +30,6 @@ api_v1_router.include_router(news.router, prefix="/news", tags=["News"])
 api_v1_router.include_router(behavior.router, prefix="/behavior", tags=["Behavior"])
 api_v1_router.include_router(reading.router, prefix="/reading", tags=["Reading"])
 api_v1_router.include_router(admin_pipeline.router, prefix="/admin/pipeline", tags=["Admin Pipeline"])
+api_v1_router.include_router(search.router, prefix="/search", tags=["Search"])
 
 

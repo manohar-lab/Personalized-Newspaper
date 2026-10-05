@@ -53,10 +53,16 @@ export const Header: React.FC<HeaderProps> = ({
       <nav className="flex justify-between items-center py-2.5 border-b border-[#D3CBB9] text-xs font-semibold uppercase tracking-wider text-[#121212]">
         <div className="flex items-center space-x-4 sm:space-x-6 overflow-x-auto py-1">
           <a
-            href="#front-page"
-            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold border-b-2 border-red-700 pb-0.5 shrink-0"
+            href="/"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold pb-0.5 shrink-0"
           >
             <Newspaper className="h-3.5 w-3.5" /> Front Page
+          </a>
+          <a
+            href="/search"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
+          >
+            🔎 Search Engine
           </a>
           <button
             type="button"

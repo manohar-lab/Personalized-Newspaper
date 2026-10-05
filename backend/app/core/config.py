@@ -112,6 +112,16 @@ class Settings(BaseSettings):
     USER_BATCH_SIZE: int = Field(default=100)
     CLEANUP_RETENTION_DAYS: int = Field(default=30)
 
+    # Phase 11: Intelligent Personalized Search Engine Settings
+    SEARCH_FULL_TEXT_WEIGHT: float = Field(default=0.50)
+    SEARCH_SEMANTIC_WEIGHT: float = Field(default=0.50)
+    SEARCH_PERSONALIZATION_WEIGHT: float = Field(default=0.15)
+    SEARCH_TOPIC_BOOST: float = Field(default=0.15)
+    SEARCH_ENTITY_BOOST: float = Field(default=0.15)
+    SEARCH_KEYWORD_BOOST: float = Field(default=0.10)
+    SEARCH_DEFAULT_PAGE_SIZE: int = Field(default=20)
+    SEARCH_MAX_PAGE_SIZE: int = Field(default=50)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

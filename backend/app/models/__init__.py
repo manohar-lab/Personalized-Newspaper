@@ -10,6 +10,7 @@ from app.models.ingestion_run import IngestionRun
 from app.models.entity import Entity, article_entities
 from app.models.analysis import ArticleAnalysis, ArticleKeyword
 from app.models.pipeline_run import PipelineRun
+from app.models.search import UserSearchHistory
 
 __all__ = [
     "Base",
@@ -29,5 +30,7 @@ __all__ = [
     "ArticleAnalysis",
     "ArticleKeyword",
     "PipelineRun",
+    "UserSearchHistory",
 ]
+
 

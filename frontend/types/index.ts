@@ -212,3 +212,84 @@ export interface NewspaperEditionResponse {
   sections: NewspaperSectionResponse[];
   total_stories: number;
 }
+
+// ----------------------------------------------------------------------------
+// Phase 11 Search Types
+// ----------------------------------------------------------------------------
+export interface SearchFilters {
+  q?: string;
+  topic?: string;
+  category?: string;
+  source?: string;
+  date_from?: string;
+  date_to?: string;
+  date_preset?: "today" | "yesterday" | "last_7_days" | "last_30_days" | string;
+  article_type?: string;
+  language?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface SearchResultItem {
+  article_id: string;
+  title: string;
+  summary?: string | null;
+  source_name?: string | null;
+  published_at?: string | null;
+  primary_category?: string | null;
+  topics: string[];
+  entities: string[];
+  top_image_url?: string | null;
+  reading_time_minutes: number;
+  is_full_text_available: boolean;
+  full_text_score: number;
+  semantic_score: number;
+  search_score: number;
+  personal_relevance_score?: number | null;
+  final_score: number;
+  match_explanation?: string | null;
+}
+
+export interface ParsedQueryInfo {
+  raw_query: string;
+  clean_keywords: string;
+  detected_topics: string[];
+  detected_entities: string[];
+  detected_sources: string[];
+  date_range_detected?: string | null;
+}
+
+export interface SearchResponse {
+  query: string;
+  total_results: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  results: SearchResultItem[];
+  parsed_query?: ParsedQueryInfo | null;
+  execution_time_ms: number;
+}
+
+export interface SearchSuggestionItem {
+  text: string;
+  type: "TOPIC" | "ENTITY" | "KEYWORD" | "RECENT" | string;
+  subtitle?: string | null;
+}
+
+export interface SearchSuggestionsResponse {
+  query: string;
+  suggestions: SearchSuggestionItem[];
+}
+
+export interface SearchHistoryItem {
+  id: string;
+  query: string;
+  filters?: string | null;
+  result_count: number;
+  created_at: string;
+}
+
+export interface SearchHistoryResponse {
+  history: SearchHistoryItem[];
+}
+
