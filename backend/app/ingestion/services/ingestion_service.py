@@ -212,6 +212,7 @@ class IngestionService:
                         content_hash=norm_art.content_hash,
                         language=feed.language,
                         is_full_text_available=False,
+                        extraction_status="NOT_ATTEMPTED",
                     )
 
                     if default_topic:

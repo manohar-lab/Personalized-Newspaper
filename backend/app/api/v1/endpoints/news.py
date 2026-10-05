@@ -11,6 +11,9 @@ from app.models.user import User
 from app.models.ingestion_run import IngestionRun
 from app.ingestion.services.source_service import SourceService
 from app.ingestion.services.ingestion_service import IngestionService
+from app.ingestion.scraper.scraper_service import ScraperService
+from app.services.article_extraction_service import ArticleExtractionService
+from app.models.article import Article
 from app.schemas.news import (
     SourceCreate,
     SourceResponse,
@@ -20,6 +23,11 @@ from app.schemas.news import (
     IngestionRunResponse,
     IngestionSummary,
     IngestionBatchResponse,
+    ScrapeArticleResponse,
+    ScrapeBatchResponse,
+    ExtractionResultResponse,
+    ExtractPendingResponse,
+    ExtractionStatusDetailResponse,
 )
 
 router = APIRouter()
@@ -252,3 +260,122 @@ async def get_ingestion_runs(
             )
         )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Web Extraction & Scraping Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post("/articles/{article_id}/extract", response_model=ExtractionResultResponse)
+async def extract_single_article(
+    article_id: uuid.UUID,
+    force: bool = Query(default=False, description="Re-extract even if full text is available"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Triggers web article extraction for a single article by ID.
+
+    Fetches the article webpage, checks robots.txt and content policies,
+    extracts metadata and cleaned article body, and updates the database.
+    """
+    service = ArticleExtractionService(db)
+    result = await service.extract_article(article_id, force=force)
+    return ExtractionResultResponse(
+        article_id=result.article_id,
+        status=result.status.value if hasattr(result.status, "value") else str(result.status),
+        title=result.title,
+        author=result.author,
+        content_length=result.content_length,
+        canonical_url=result.canonical_url,
+        extraction_method=result.extraction_method,
+        is_full_text_available=result.is_full_text_available,
+        error=result.error,
+    )
+
+
+@router.post("/articles/extract-pending", response_model=ExtractPendingResponse)
+async def extract_pending_articles_endpoint(
+    limit: int = Query(default=20, ge=1, le=100, description="Max articles to extract"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Batch extracts pending RSS-discovered articles that do not have full text.
+    """
+    service = ArticleExtractionService(db)
+    result = await service.extract_pending_articles(limit=limit)
+    return ExtractPendingResponse(**result)
+
+
+@router.get("/articles/{article_id}/extraction-status", response_model=ExtractionStatusDetailResponse)
+async def get_article_extraction_status(
+    article_id: uuid.UUID,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Internal/development endpoint to inspect extraction metadata for an article.
+    """
+    stmt = select(Article).where(Article.id == article_id)
+    res = await db.execute(stmt)
+    article = res.scalar_one_or_none()
+
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Article not found",
+        )
+
+    return ExtractionStatusDetailResponse(
+        article_id=article.id,
+        status=article.extraction_status or article.scrape_status or "NOT_ATTEMPTED",
+        method=article.extraction_method,
+        extracted_at=article.extracted_at or article.scraped_at,
+        content_length=len(article.content or ""),
+        canonical_url=article.canonical_url or article.source_url,
+        is_full_text_available=article.is_full_text_available,
+        error=article.extraction_error or article.scrape_error,
+    )
+
+
+@router.post("/articles/{article_id}/scrape", response_model=ScrapeArticleResponse)
+async def scrape_single_article(
+    article_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Triggers web scraping for a single article by ID (ScraperService compatibility).
+    """
+    scraper_service = ScraperService(db)
+    result = await scraper_service.scrape_article(article_id)
+    return ScrapeArticleResponse(**result)
+
+
+@router.post("/scrape/batch", response_model=ScrapeBatchResponse)
+async def scrape_pending_articles_batch(
+    limit: int = Query(default=50, ge=1, le=200, description="Max articles to scrape in this batch"),
+    feed_id: Optional[uuid.UUID] = Query(default=None, description="Limit to a specific feed"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Batch-scrapes pending articles (ScraperService compatibility).
+    """
+    scraper_service = ScraperService(db)
+    result = await scraper_service.scrape_pending_articles(limit=limit, feed_id=feed_id)
+
+    coerced_results = [
+        ScrapeArticleResponse(**r) for r in result.get("results", [])
+    ]
+    return ScrapeBatchResponse(
+        total_articles=result["total_articles"],
+        success=result["success"],
+        failed=result["failed"],
+        robots_blocked=result["robots_blocked"],
+        validation_failed=result["validation_failed"],
+        skipped=result["skipped"],
+        results=coerced_results,
+    )
+

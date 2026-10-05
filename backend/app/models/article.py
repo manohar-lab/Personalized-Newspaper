@@ -91,6 +91,25 @@ class Article(Base):
     is_full_text_available: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
     )
+    # Phase 5: Extraction & Scraping tracking
+    scrape_status: Mapped[Optional[str]] = mapped_column(
+        String(30), index=True, nullable=True
+    )  # PENDING | SUCCESS | FAILED | ROBOTS_BLOCKED | VALIDATION_FAILED | SKIPPED
+    scraped_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    scrape_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    extraction_status: Mapped[Optional[str]] = mapped_column(
+        String(30), index=True, default="NOT_ATTEMPTED", nullable=True
+    )  # NOT_ATTEMPTED | PENDING | SUCCESS | PARTIAL | FAILED | ROBOTS_BLOCKED | PAYWALL | ACCESS_DENIED | UNSUPPORTED
+    extracted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    extraction_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extraction_method: Mapped[Optional[str]] = mapped_column(
+        String(30), nullable=True
+    )  # TRAFILATURA | JSON_LD | OPENGRAPH | FALLBACK
 
     # Relationships
     topics: Mapped[List["Topic"]] = relationship(

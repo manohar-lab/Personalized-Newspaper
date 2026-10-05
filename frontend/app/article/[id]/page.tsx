@@ -342,20 +342,47 @@ export default function ArticlePage() {
                         .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>"),
                     }}
                   />
+                  {(article.canonical_url || article.source_url) && (
+                    <div className="mt-8 pt-4 border-t border-[#E4DCCF] flex items-center justify-between text-xs text-[#7A7268] font-sans">
+                      <span>Source: <strong className="text-[#181615]">{article.source_name || "Publisher"}</strong></span>
+                      <a
+                        href={article.canonical_url || article.source_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#8C2524] hover:underline inline-flex items-center gap-1 font-semibold"
+                      >
+                        <span>View original publication</span>
+                        <span>↗</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mb-12 space-y-6">
+                  {article.extraction_status === "PAYWALL" && (
+                    <div className="p-4 bg-amber-50/80 border border-amber-200/90 rounded-sm text-xs text-amber-900 font-sans flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>This publisher requires access on its website.</span>
+                    </div>
+                  )}
+
                   <div className="p-6 sm:p-8 bg-[#F5EFEB] border border-[#DCD3C7] rounded-sm">
-                    <h3 className="font-editorial-heading font-bold text-xl text-[#181615] mb-3">
-                      Story Excerpt & Summary
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-editorial-heading font-bold text-xl text-[#181615]">
+                        Article Preview
+                      </h3>
+                      <span className="text-[11px] font-mono uppercase bg-[#E4DCCF] text-[#4A453E] px-2 py-0.5 rounded-sm">
+                        Preview Mode
+                      </span>
+                    </div>
+
                     <p className="font-editorial-body text-base sm:text-lg text-[#3C3630] leading-relaxed mb-6">
-                      {article.description || "No full summary provided for this feed entry."}
+                      {article.description || "No excerpt or full text available for this RSS discovery entry."}
                     </p>
 
                     <div className="pt-4 border-t border-[#E4DCCF] flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans">
                       <div className="text-xs text-[#7A7268]">
-                        Curated via {article.source_name || "publisher"} RSS feed.
+                        Discovered via {article.source_name || "publisher"} RSS feed.
                       </div>
 
                       {(article.canonical_url || article.source_url) && (
@@ -365,7 +392,7 @@ export default function ArticlePage() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#8C2524] text-white text-xs font-bold uppercase tracking-wider rounded-sm hover:bg-[#6E1C1B] transition-colors shadow-sm"
                         >
-                          <span>Read Full Story on {article.source_name || "Original Publisher"}</span>
+                          <span>Read original article</span>
                           <span className="text-sm">→</span>
                         </a>
                       )}

@@ -119,3 +119,64 @@ class IngestionBatchResponse(BaseModel):
     total_articles_created: int
     total_duplicates_found: int
     results: List[IngestionSummary]
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: Scraping schemas
+# ---------------------------------------------------------------------------
+
+class ScrapeArticleResponse(BaseModel):
+    """Response for a single article scrape attempt."""
+    article_id: uuid.UUID
+    scrape_status: str       # SUCCESS | FAILED | ROBOTS_BLOCKED | VALIDATION_FAILED | SKIPPED
+    success: bool
+    word_count: Optional[int] = None
+    extraction_method: Optional[str] = None
+    reading_time_minutes: Optional[int] = None
+    error: Optional[str] = None
+    is_paywall: Optional[bool] = None
+
+
+class ScrapeBatchResponse(BaseModel):
+    """Response for a batch scrape operation."""
+    total_articles: int
+    success: int
+    failed: int
+    robots_blocked: int
+    validation_failed: int
+    skipped: int
+    results: List[ScrapeArticleResponse]
+
+
+class ExtractionResultResponse(BaseModel):
+    article_id: uuid.UUID
+    status: str
+    title: Optional[str] = None
+    author: Optional[str] = None
+    content_length: int = 0
+    canonical_url: Optional[str] = None
+    extraction_method: Optional[str] = None
+    is_full_text_available: bool = False
+    error: Optional[str] = None
+
+
+class ExtractPendingResponse(BaseModel):
+    total_articles: int
+    successful: int
+    failed: int
+    robots_blocked: int
+    paywalled: int
+    access_denied: int = 0
+    unsupported: int = 0
+    results: List[Dict[str, Any]]
+
+
+class ExtractionStatusDetailResponse(BaseModel):
+    article_id: uuid.UUID
+    status: Optional[str] = None
+    method: Optional[str] = None
+    extracted_at: Optional[datetime] = None
+    content_length: int = 0
+    canonical_url: Optional[str] = None
+    is_full_text_available: bool = False
+    error: Optional[str] = None

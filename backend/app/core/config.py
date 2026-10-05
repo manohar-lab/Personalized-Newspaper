@@ -22,11 +22,18 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = Field(default="http://localhost:3000")
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    # Ingestion Configuration
+    # Ingestion & Extraction Configuration
     USER_AGENT: str = Field(
         default="PersonalizedNewspaperBot/1.0 (+https://github.com/manohar-lab/Personalized-Newspaper)"
     )
     FEED_FETCH_TIMEOUT_SECONDS: int = Field(default=15)
+    REQUEST_TIMEOUT: int = Field(default=15)
+    MAX_CONTENT_SIZE: int = Field(default=5 * 1024 * 1024)  # 5MB
+    MAX_REDIRECTS: int = Field(default=5)
+    EXTRACTION_CONCURRENCY: int = Field(default=3)
+    MIN_REQUEST_DELAY_SECONDS: float = Field(default=1.0)
+    MIN_ARTICLE_BODY_LENGTH: int = Field(default=150)
+    ROBOTS_CACHE_TTL_SECONDS: int = Field(default=3600)
 
     # Database Configuration
     DATABASE_URL: str = Field(

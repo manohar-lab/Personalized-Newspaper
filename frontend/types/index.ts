@@ -92,6 +92,8 @@ export interface Article {
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   language: string;
   is_full_text_available: boolean;
+  extraction_status?: "NOT_ATTEMPTED" | "PENDING" | "SUCCESS" | "PARTIAL" | "FAILED" | "ROBOTS_BLOCKED" | "PAYWALL" | "ACCESS_DENIED" | "UNSUPPORTED" | string;
+  extraction_method?: "TRAFILATURA" | "JSON_LD" | "OPENGRAPH" | "FALLBACK" | string | null;
   topics: TopicSummary[];
   is_saved?: boolean;
   is_liked?: boolean;

@@ -32,6 +32,8 @@ class ArticleBase(BaseModel):
     status: str
     language: str = "en"
     is_full_text_available: bool = True
+    extraction_status: Optional[str] = "NOT_ATTEMPTED"
+    extraction_method: Optional[str] = None
     topics: List[TopicSummary] = []
     is_saved: Optional[bool] = False
     is_liked: Optional[bool] = False
