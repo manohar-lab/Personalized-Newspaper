@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from app.models.topic import Topic
 from app.models.interest import UserInterest
+from app.personalization.models import UserInterestEmbedding
 
 class InterestService:
     @staticmethod
@@ -78,6 +79,10 @@ class InterestService:
             )
             session.add(interest)
 
+        # Invalidate cached user interest embedding
+        await session.execute(
+            delete(UserInterestEmbedding).where(UserInterestEmbedding.user_id == user_id)
+        )
         await session.commit()
         await session.refresh(interest, attribute_names=["topic"])
         return interest
@@ -102,6 +107,10 @@ class InterestService:
             UserInterest.topic_id == topic.id,
         )
         result = await session.execute(stmt_delete)
+        # Invalidate cached user interest embedding
+        await session.execute(
+            delete(UserInterestEmbedding).where(UserInterestEmbedding.user_id == user_id)
+        )
         await session.commit()
         return result.rowcount > 0
 
@@ -194,6 +203,10 @@ class InterestService:
 
         interest.interest_score = clamped_score
         interest.source = source
+        # Invalidate cached user interest embedding
+        await session.execute(
+            delete(UserInterestEmbedding).where(UserInterestEmbedding.user_id == user_id)
+        )
         await session.commit()
         await session.refresh(interest, attribute_names=["topic"])
         return interest

@@ -46,6 +46,20 @@ class Settings(BaseSettings):
     ANALYSIS_CONCURRENCY: int = Field(default=3)
     ANALYSIS_VERSION: str = Field(default="v1")
 
+    # Personalization Engine Configuration
+    PERSONALIZATION_TOPIC_WEIGHT: float = Field(default=0.30)
+    PERSONALIZATION_SEMANTIC_WEIGHT: float = Field(default=0.25)
+    PERSONALIZATION_ENTITY_WEIGHT: float = Field(default=0.15)
+    PERSONALIZATION_KEYWORD_WEIGHT: float = Field(default=0.10)
+    PERSONALIZATION_IMPORTANCE_WEIGHT: float = Field(default=0.10)
+    PERSONALIZATION_RECENCY_WEIGHT: float = Field(default=0.10)
+
+    # Negative Preferences & Decay
+    NEGATIVE_TOPIC_PENALTY: float = Field(default=1.0)
+    PERSONALIZATION_RECENCY_HALF_LIFE_HOURS: float = Field(default=72.0)
+    PERSONALIZATION_DIVERSITY_PENALTY: float = Field(default=0.15)
+    PERSONALIZATION_MAX_CONSECUTIVE_SAME_TOPIC: int = Field(default=1)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"
@@ -67,5 +81,26 @@ class Settings(BaseSettings):
             return v
         return ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+    def validate_weights(self) -> None:
+        total = (
+            self.PERSONALIZATION_TOPIC_WEIGHT
+            + self.PERSONALIZATION_SEMANTIC_WEIGHT
+            + self.PERSONALIZATION_ENTITY_WEIGHT
+            + self.PERSONALIZATION_KEYWORD_WEIGHT
+            + self.PERSONALIZATION_IMPORTANCE_WEIGHT
+            + self.PERSONALIZATION_RECENCY_WEIGHT
+        )
+        if abs(total - 1.0) > 1e-5:
+            raise ValueError(
+                f"Personalization weights must sum to 1.0 (got {total:.4f}). "
+                f"topic={self.PERSONALIZATION_TOPIC_WEIGHT}, "
+                f"semantic={self.PERSONALIZATION_SEMANTIC_WEIGHT}, "
+                f"entity={self.PERSONALIZATION_ENTITY_WEIGHT}, "
+                f"keyword={self.PERSONALIZATION_KEYWORD_WEIGHT}, "
+                f"importance={self.PERSONALIZATION_IMPORTANCE_WEIGHT}, "
+                f"recency={self.PERSONALIZATION_RECENCY_WEIGHT}"
+            )
+
 
 settings = Settings()
+settings.validate_weights()
