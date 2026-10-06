@@ -13,9 +13,11 @@ from app.workers.jobs import (
     job_generate_daily_editions,
     job_cleanup_old_data,
     job_interest_learning,
+    job_generate_recommendations,
 )
 
 logger = logging.getLogger(__name__)
+
 
 # Module-level singleton
 _scheduler: Optional[AsyncIOScheduler] = None
@@ -109,7 +111,19 @@ def start_scheduler() -> AsyncIOScheduler:
         coalesce=True,
     )
 
+    # 7. Recommendation Generation Batch Job (Phase 14)
+    _scheduler.add_job(
+        job_generate_recommendations,
+        trigger=IntervalTrigger(minutes=30),
+        id="job_generate_recommendations",
+        name="Batch Background Recommendation Generation",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
     _scheduler.start()
+
     logger.info(
         f"APScheduler started successfully with {len(_scheduler.get_jobs())} jobs: "
         f"fetch={settings.NEWS_FETCH_INTERVAL_MINUTES}m, "

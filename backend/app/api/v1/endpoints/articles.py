@@ -136,3 +136,18 @@ async def get_article_reading_history(
     if not history:
         raise HTTPException(status_code=404, detail="Reading history for this article not found")
     return history
+
+
+@router.get("/{id}/recommendations")
+async def get_article_recommendations(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    limit: int = Query(6, ge=1, le=20),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get 'More like this' recommendations based on target article embedding & topic overlap."""
+    from app.recommendations.recommendation_service import RecommendationService
+    service = RecommendationService(db)
+    user_id = current_user.id if current_user else uuid.uuid4()
+    return await service.get_more_like_this(user_id=user_id, article_id=id, limit=limit)
+

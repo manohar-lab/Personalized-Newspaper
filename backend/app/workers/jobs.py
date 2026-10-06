@@ -68,6 +68,36 @@ async def job_interest_learning() -> Dict[str, Any]:
         return {"status": "success", "processed_events": count}
 
 
+async def job_generate_recommendations() -> Dict[str, Any]:
+    """Background job 7: Phase 14 Batch background recommendation candidate generation for active users."""
+    logger.info("Executing scheduled job: generate_recommendations")
+    from sqlalchemy import select
+    from app.models.user import User
+    from app.recommendations.recommendation_service import RecommendationService
+
+    async with AsyncSessionLocal() as session:
+        stmt = select(User).where(User.is_active.is_(True))
+        res = await session.execute(stmt)
+        active_users = list(res.scalars().all())
+
+        rec_service = RecommendationService(session)
+        processed_count = 0
+        for user in active_users:
+            try:
+                await rec_service.recommend(
+                    user_id=user.id,
+                    limit=20,
+                    context="DISCOVER",
+                    force_refresh=True,
+                )
+                processed_count += 1
+            except Exception as e:
+                logger.warning(f"Error generating background recommendations for user {user.id}: {e}")
+
+        logger.info(f"Finished generate_recommendations: processed={processed_count} active users")
+        return {"status": "success", "processed_users": processed_count}
+
+
 async def job_full_pipeline() -> Dict[str, Any]:
     """Background job: Run full end-to-end pipeline."""
     logger.info("Executing full autonomous pipeline")
@@ -76,3 +106,4 @@ async def job_full_pipeline() -> Dict[str, Any]:
         res = await service.run_full_autonomous_pipeline()
         logger.info(f"Finished full pipeline: status={res.get('status')}")
         return res
+

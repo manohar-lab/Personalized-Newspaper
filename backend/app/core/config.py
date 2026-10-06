@@ -160,6 +160,23 @@ class Settings(BaseSettings):
     INTEREST_STABLE_THRESHOLD: float = Field(default=0.50)
     INTEREST_DORMANT_DAYS: int = Field(default=45)
 
+    # Phase 14: Personalized News Discovery & Recommendation Engine Settings
+    RECOMMENDATION_MAX_AGE_HOURS: int = Field(default=72)
+    RECOMMENDATION_EXPLOITATION_RATIO: float = Field(default=0.80)
+    RECOMMENDATION_EXPLORATION_RATIO: float = Field(default=0.20)
+    RECOMMENDATION_MAX_PER_TOPIC: int = Field(default=3)
+    RECOMMENDATION_COOLDOWN_HOURS: int = Field(default=24)
+    RECOMMENDATION_CACHE_TTL_MINUTES: int = Field(default=15)
+
+    # Recommendation Scoring Weights
+    REC_SEMANTIC_WEIGHT: float = Field(default=0.25)
+    REC_TOPIC_WEIGHT: float = Field(default=0.25)
+    REC_ENTITY_WEIGHT: float = Field(default=0.15)
+    REC_IMPORTANCE_WEIGHT: float = Field(default=0.10)
+    REC_RECENCY_WEIGHT: float = Field(default=0.10)
+    REC_NOVELTY_WEIGHT: float = Field(default=0.10)
+    REC_EMERGING_BONUS: float = Field(default=0.05)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

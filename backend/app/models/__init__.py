@@ -18,6 +18,7 @@ from app.models.interest_profile import (
     InterestLearningEvent,
     UserInterestSnapshot,
 )
+from app.recommendations.models import UserRecommendation
 
 __all__ = [
     "Base",
@@ -43,6 +44,8 @@ __all__ = [
     "UserTopicPreference",
     "InterestLearningEvent",
     "UserInterestSnapshot",
+    "UserRecommendation",
 ]
+
 
 
