@@ -177,6 +177,18 @@ class Settings(BaseSettings):
     REC_NOVELTY_WEIGHT: float = Field(default=0.10)
     REC_EMERGING_BONUS: float = Field(default=0.05)
 
+    # Phase 16: Multi-Source Story Intelligence Engine Settings
+    STORY_MATCH_THRESHOLD: float = Field(default=0.62)
+    STORY_SEMANTIC_WEIGHT: float = Field(default=0.35)
+    STORY_ENTITY_WEIGHT: float = Field(default=0.25)
+    STORY_TOPIC_WEIGHT: float = Field(default=0.15)
+    STORY_KEYWORD_WEIGHT: float = Field(default=0.10)
+    STORY_TEMPORAL_WEIGHT: float = Field(default=0.05)
+    STORY_TITLE_WEIGHT: float = Field(default=0.10)
+    STORY_WINDOW_DAYS: int = Field(default=7)
+    STORY_MERGE_THRESHOLD: float = Field(default=0.82)
+    STORY_DEVELOPING_VELOCITY_THRESHOLD: float = Field(default=2.0)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

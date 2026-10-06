@@ -110,6 +110,20 @@ async def job_evaluate_sources() -> Dict[str, Any]:
         return {"status": "success", "evaluated_sources": len(evaluated)}
 
 
+async def job_process_stories() -> Dict[str, Any]:
+    """Background job 9: Phase 16 Multi-source story batch assignment & auto-merging."""
+    logger.info("Executing scheduled job: process_stories")
+    from app.story_intelligence.story_service import StoryIntelligenceService
+
+    async with AsyncSessionLocal() as session:
+        story_svc = StoryIntelligenceService(session)
+        assigned = await story_svc.batch_process_unassigned_articles(limit=100)
+        merged = await story_svc.auto_merge_candidate_stories()
+        await session.commit()
+        logger.info(f"Finished process_stories: assigned={assigned}, merged={merged}")
+        return {"status": "success", "assigned_articles": assigned, "merged_stories": merged}
+
+
 async def job_full_pipeline() -> Dict[str, Any]:
     """Background job: Run full end-to-end pipeline."""
     logger.info("Executing full autonomous pipeline")
@@ -118,4 +132,5 @@ async def job_full_pipeline() -> Dict[str, Any]:
         res = await service.run_full_autonomous_pipeline()
         logger.info(f"Finished full pipeline: status={res.get('status')}")
         return res
+
 

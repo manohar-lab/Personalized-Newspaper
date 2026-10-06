@@ -191,7 +191,12 @@ export interface NewspaperStoryResponse {
   is_saved: boolean;
   is_liked: boolean;
   is_read: boolean;
+  story_id?: string | null;
+  story_slug?: string | null;
+  story_article_count?: number;
+  story_source_count?: number;
 }
+
 
 export interface NewspaperSectionResponse {
   name: string;
@@ -569,5 +574,124 @@ export interface ArticleReportRequest {
   reason: "MISLEADING" | "LOW_QUALITY" | "BROKEN_ARTICLE" | "DUPLICATE" | "PAYWALL" | "OTHER";
   details?: string;
 }
+
+// ----------------------------------------------------------------------------
+// Phase 16 Story Intelligence Types
+// ----------------------------------------------------------------------------
+
+export type StoryStatus = "ACTIVE" | "DEVELOPING" | "STABLE" | "RESOLVED" | "ARCHIVED";
+export type StoryRelationshipType = "PRIMARY" | "UPDATE" | "ANALYSIS" | "REACTION" | "BACKGROUND" | "RELATED";
+
+export interface StoryArticleItem {
+  id: string;
+  article_id: string;
+  title: string;
+  summary?: string | null;
+  url?: string | null;
+  source_name?: string | null;
+  published_at?: string | null;
+  relationship_type: StoryRelationshipType | string;
+  similarity_score: number;
+  top_image_url?: string | null;
+  reading_time_minutes: number;
+  is_syndicated: boolean;
+  potential_conflict: boolean;
+}
+
+export interface StoryTimelineItem {
+  id: string;
+  article_id: string;
+  title: string;
+  source_name?: string | null;
+  published_at: string;
+  relationship_type: string;
+  url?: string | null;
+  snippet?: string | null;
+}
+
+export interface StoryItem {
+  id: string;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  status: StoryStatus | string;
+  importance_score: number;
+  quality_score: number;
+  activity_score: number;
+  article_count: number;
+  source_count: number;
+  independent_source_count: number;
+  first_published_at: string;
+  last_updated_at: string;
+  primary_topic_name?: string | null;
+  primary_article_id?: string | null;
+  latest_article_id?: string | null;
+  primary_article?: {
+    id: string;
+    title: string;
+    url?: string | null;
+  } | null;
+  latest_article?: {
+    id: string;
+    title: string;
+    url?: string | null;
+  } | null;
+  has_conflicts: boolean;
+  conflict_note?: string | null;
+  personal_score?: number | null;
+}
+
+export interface StoryDetail {
+  id: string;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  status: StoryStatus | string;
+  importance_score: number;
+  quality_score: number;
+  activity_score: number;
+  article_count: number;
+  source_count: number;
+  independent_source_count: number;
+  first_published_at: string;
+  last_updated_at: string;
+  primary_topic_id?: string | null;
+  primary_topic_name?: string | null;
+  primary_article?: StoryArticleItem | null;
+  latest_article?: StoryArticleItem | null;
+  articles: StoryArticleItem[];
+  timeline: StoryTimelineItem[];
+  has_conflicts: boolean;
+  conflict_note?: string | null;
+  sources: string[];
+}
+
+export interface MultiSourceStoryCoverageResponse {
+  story_id: string;
+  story_title: string;
+  story_slug: string;
+  total_articles: number;
+  total_sources: number;
+  independent_source_count: number;
+  articles_by_relationship: Record<string, StoryArticleItem[]>;
+  sources: string[];
+  has_conflicts: boolean;
+  conflict_details?: { note?: string }[];
+}
+
+export interface StoryFeedResponse {
+  items: StoryItem[];
+  total: number;
+  page: number;
+  limit: number;
+  has_next: boolean;
+}
+
+export interface StorySearchResponse {
+  query: string;
+  total: number;
+  results: StoryItem[];
+}
+
 
 

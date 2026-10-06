@@ -151,6 +151,13 @@ export function NewspaperHeader({
             </Link>
 
             <Link
+              href="/stories"
+              className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
+            >
+              <span>⚡ Stories</span>
+            </Link>
+
+            <Link
               href="/sources"
               className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
             >

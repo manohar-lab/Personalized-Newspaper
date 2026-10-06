@@ -196,6 +196,17 @@ class SearchService:
             except Exception as e:
                 logger.warning(f"Failed to record search history: {e}")
 
+        # 9. Matching Stories
+        matching_stories = []
+        if raw_query:
+            try:
+                from app.story_intelligence.story_service import StoryIntelligenceService
+                story_svc = StoryIntelligenceService(self.session)
+                story_res = await story_svc.search_stories(query=raw_query, limit=5)
+                matching_stories = [s.model_dump() for s in story_res.results]
+            except Exception as e:
+                logger.warning(f"Failed to retrieve stories in search: {e}")
+
         return SearchResponse(
             query=raw_query,
             total_results=total_results,
@@ -203,9 +214,11 @@ class SearchService:
             page_size=page_size,
             total_pages=total_pages,
             results=paginated_items,
+            stories=matching_stories,
             parsed_query=parsed_query,
             execution_time_ms=execution_ms,
         )
+
 
     # -------------------------------------------------------------------------
     # Search Suggestions & Autocomplete

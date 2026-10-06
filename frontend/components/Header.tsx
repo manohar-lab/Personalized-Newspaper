@@ -83,6 +83,12 @@ export const Header: React.FC<HeaderProps> = ({
             📖 Reading History
           </a>
           <a
+            href="/stories"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
+          >
+            ⚡ Developing Stories
+          </a>
+          <a
             href="/sources"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >

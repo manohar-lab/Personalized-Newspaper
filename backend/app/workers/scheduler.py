@@ -15,6 +15,7 @@ from app.workers.jobs import (
     job_interest_learning,
     job_generate_recommendations,
     job_evaluate_sources,
+    job_process_stories,
 )
 
 logger = logging.getLogger(__name__)
@@ -129,6 +130,17 @@ def start_scheduler() -> AsyncIOScheduler:
         trigger=IntervalTrigger(hours=24),
         id="job_evaluate_sources",
         name="Evaluate News Sources Quality & Health",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # 9. Story Intelligence Batch Processing Job (Phase 16)
+    _scheduler.add_job(
+        job_process_stories,
+        trigger=IntervalTrigger(minutes=30),
+        id="job_process_stories",
+        name="Multi-Source Story Batch Assignment & Merge",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

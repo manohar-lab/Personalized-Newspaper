@@ -65,8 +65,10 @@ class SearchResponse(BaseModel):
     page_size: int = 20
     total_pages: int = 1
     results: List[SearchResultItem] = Field(default_factory=list)
+    stories: List[Dict[str, Any]] = Field(default_factory=list)
     parsed_query: Optional[ParsedQueryInfo] = None
     execution_time_ms: float = 0.0
+
 
 
 class SearchSuggestionItem(BaseModel):

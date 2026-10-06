@@ -63,6 +63,13 @@ class NewspaperStoryResponse(BaseModel):
     is_not_interested: bool = False
     relevance_score: Optional[float] = None
 
+    # Story Intelligence Integration
+    story_id: Optional[uuid.UUID] = None
+    story_slug: Optional[str] = None
+    story_article_count: Optional[int] = 1
+    story_source_count: Optional[int] = 1
+
+
 
 class NewspaperSectionResponse(BaseModel):
     """A populated editorial section containing ranked stories."""

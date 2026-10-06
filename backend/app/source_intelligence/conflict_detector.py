@@ -11,13 +11,14 @@ class ConflictDetector:
     """
 
     OPPOSING_PAIRS = [
-        ({"launch", "launches", "scheduled", "begins", "starts"}, {"delay", "delayed", "postponed", "cancelled", "halted"}),
-        ({"approve", "approved", "passes", "cleared", "wins"}, {"reject", "rejected", "fails", "denied", "blocked"}),
+        ({"launch", "launches", "launched", "launching", "scheduled", "begins", "starts", "proceeding", "on track"}, {"delay", "delays", "delayed", "delaying", "postpone", "postponed", "cancelled", "halted", "suspended"}),
+        ({"approve", "approved", "approves", "approving", "passes", "cleared", "wins"}, {"reject", "rejected", "rejects", "fails", "denied", "blocked"}),
         ({"rise", "rises", "gain", "gains", "surges", "up", "record"}, {"fall", "falls", "drop", "drops", "plunges", "down", "slump"}),
-        ({"confirms", "confirmed", "admits"}, {"denies", "denied", "refutes", "dismisses"}),
+        ({"confirms", "confirmed", "confirming", "admits"}, {"denies", "denied", "denying", "refutes", "dismisses"}),
         ({"acquires", "buys", "merges"}, {"cancels deal", "walks away", "rejects buyout"}),
         ({"resigns", "steps down", "quits"}, {"stays", "denies resignation"}),
     ]
+
 
     @classmethod
     def _extract_words(cls, text: str) -> set:

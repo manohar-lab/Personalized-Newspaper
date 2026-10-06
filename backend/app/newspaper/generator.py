@@ -253,6 +253,23 @@ class NewspaperGenerationService:
         article_ids = [s.article_id for s in edition.stories]
         actions_map = await self.action_repo.get_user_actions_map(user_id, article_ids)
 
+        # Query Story Intelligence models for these articles
+        from app.story_intelligence.models import StoryArticle, Story
+        stmt_story_art = (
+            select(StoryArticle, Story)
+            .join(Story, Story.id == StoryArticle.story_id)
+            .where(StoryArticle.article_id.in_(article_ids))
+        )
+        res_sa = await self.session.execute(stmt_story_art)
+        story_info_map = {}
+        for sa, story_obj in res_sa.all():
+            story_info_map[sa.article_id] = {
+                "story_id": story_obj.id,
+                "story_slug": story_obj.slug,
+                "story_article_count": story_obj.article_count,
+                "story_source_count": story_obj.source_count,
+            }
+
         # Build story responses
         story_responses: List[NewspaperStoryResponse] = []
         sections_dict: Dict[str, List[NewspaperStoryResponse]] = {}
@@ -269,6 +286,7 @@ class NewspaperGenerationService:
                 for t in (art.topics or [])
             ]
             
+            st_info = story_info_map.get(art.id, {})
             sr = NewspaperStoryResponse(
                 id=s.id,
                 article_id=s.article_id,
@@ -295,8 +313,13 @@ class NewspaperGenerationService:
                 is_read="READ" in acts,
                 relevance_score=s.editorial_score,
                 status="PUBLISHED",
+                story_id=st_info.get("story_id"),
+                story_slug=st_info.get("story_slug"),
+                story_article_count=st_info.get("story_article_count", 1),
+                story_source_count=st_info.get("story_source_count", 1),
             )
             story_responses.append(sr)
+
 
             if s.is_lead and not lead_story_response:
                 lead_story_response = sr

@@ -26,6 +26,11 @@ from app.source_intelligence.models import (
     SourceReport,
     ArticleReport,
 )
+from app.story_intelligence.models import (
+    Story,
+    StoryArticle,
+    StoryMergeEvent,
+)
 
 __all__ = [
     "Base",
@@ -57,7 +62,11 @@ __all__ = [
     "UserSourceAffinity",
     "SourceReport",
     "ArticleReport",
+    "Story",
+    "StoryArticle",
+    "StoryMergeEvent",
 ]
+
 
 
 

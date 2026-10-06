@@ -159,3 +159,12 @@ class Article(Base):
     @property
     def importance_score(self) -> Optional[float]:
         return self.analysis.importance_score if self.analysis else None
+
+    @property
+    def url(self) -> Optional[str]:
+        return self.canonical_url or self.source_url
+
+    @property
+    def top_image_url(self) -> Optional[str]:
+        return self.image_url
+
