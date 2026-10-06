@@ -12,6 +12,7 @@ from app.workers.jobs import (
     job_analyze_pending,
     job_generate_daily_editions,
     job_cleanup_old_data,
+    job_interest_learning,
 )
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,17 @@ def start_scheduler() -> AsyncIOScheduler:
         coalesce=True,
     )
 
+    # 6. Interest Learning Batch Job (Phase 13)
+    _scheduler.add_job(
+        job_interest_learning,
+        trigger=IntervalTrigger(minutes=settings.INTEREST_LEARNING_INTERVAL_MINUTES),
+        id="job_interest_learning",
+        name="Batch Dynamic Interest Learning",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
     _scheduler.start()
     logger.info(
         f"APScheduler started successfully with {len(_scheduler.get_jobs())} jobs: "
@@ -104,7 +116,8 @@ def start_scheduler() -> AsyncIOScheduler:
         f"extract={settings.ARTICLE_EXTRACTION_INTERVAL_MINUTES}m, "
         f"analyze={settings.ARTICLE_ANALYSIS_INTERVAL_MINUTES}m, "
         f"editions={settings.EDITION_GENERATION_HOUR}:00 [{settings.DEFAULT_TIMEZONE}], "
-        f"cleanup={settings.CLEANUP_INTERVAL_HOURS}h."
+        f"cleanup={settings.CLEANUP_INTERVAL_HOURS}h, "
+        f"learning={settings.INTEREST_LEARNING_INTERVAL_MINUTES}m."
     )
     return _scheduler
 

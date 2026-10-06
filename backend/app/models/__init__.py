@@ -12,6 +12,12 @@ from app.models.analysis import ArticleAnalysis, ArticleKeyword
 from app.models.pipeline_run import PipelineRun
 from app.models.search import UserSearchHistory
 from app.models.reading_history import ReadingHistory
+from app.models.interest_profile import (
+    UserInterestProfile,
+    UserTopicPreference,
+    InterestLearningEvent,
+    UserInterestSnapshot,
+)
 
 __all__ = [
     "Base",
@@ -33,6 +39,10 @@ __all__ = [
     "PipelineRun",
     "UserSearchHistory",
     "ReadingHistory",
+    "UserInterestProfile",
+    "UserTopicPreference",
+    "InterestLearningEvent",
+    "UserInterestSnapshot",
 ]
 
 

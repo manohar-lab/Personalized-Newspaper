@@ -1,4 +1,5 @@
-from typing import List
+import uuid
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,13 @@ from app.schemas.interest import (
 from app.services.interest_service import InterestService
 from app.learning.agent import InterestLearningAgent
 from app.learning.schemas import UserLearningProfileResponse
+from app.ai.interests.learner import InterestLearningService
+from app.ai.interests.schemas import (
+    DynamicProfileResponse,
+    UpdateTopicPreferenceRequest,
+    ResetLearnedProfileResponse,
+    RelevanceExplanationResponse,
+)
 
 router = APIRouter()
 
@@ -28,6 +36,16 @@ def format_interest_response(interest) -> UserInterestResponse:
         updated_at=interest.updated_at,
     )
 
+@router.get("/dynamic-profile", response_model=DynamicProfileResponse)
+async def get_dynamic_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Phase 13: Retrieve user's dynamic interest intelligence profile (explicit, strong, emerging, avoided, etc.)."""
+    learner = InterestLearningService(db)
+    return await learner.get_dynamic_profile(current_user.id)
+
+
 @router.get("/profile", response_model=UserLearningProfileResponse)
 async def get_learning_profile(
     current_user: User = Depends(get_current_user),
@@ -36,6 +54,71 @@ async def get_learning_profile(
     """Retrieve explicit vs learned user interest profile with entities and keywords."""
     agent = InterestLearningAgent(db)
     return await agent.get_user_learning_profile(current_user.id)
+
+
+@router.post("/preferences", status_code=status.HTTP_200_OK)
+async def update_topic_preference(
+    payload: UpdateTopicPreferenceRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set positive, negative, or neutral preference for a topic."""
+    learner = InterestLearningService(db)
+    pref = await learner.set_topic_preference(
+        user_id=current_user.id,
+        topic_id=payload.topic_id,
+        preference=payload.preference,
+        strength=payload.strength or 1.0,
+    )
+    return {
+        "status": "success",
+        "topic_id": str(pref.topic_id),
+        "preference": pref.preference,
+        "strength": pref.strength,
+    }
+
+
+@router.delete("/learned/{topic_id}", status_code=status.HTTP_200_OK)
+async def remove_learned_interest(
+    topic_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a specific learned or inferred topic interest."""
+    learner = InterestLearningService(db)
+    removed = await learner.remove_learned_interest(current_user.id, topic_id)
+    if not removed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Learned topic interest not found",
+        )
+    return {"status": "success", "message": "Learned interest removed."}
+
+
+@router.post("/reset-learned", response_model=ResetLearnedProfileResponse)
+async def reset_learned_profile(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Reset all learned and inferred interests while strictly preserving explicit user interests."""
+    learner = InterestLearningService(db)
+    preserved = await learner.reset_learned_profile(current_user.id)
+    return ResetLearnedProfileResponse(
+        status="success",
+        message="Learned profile reset successfully. Explicit interests were preserved.",
+        explicit_interests_preserved=preserved,
+    )
+
+
+@router.get("/explanation/{article_id}", response_model=RelevanceExplanationResponse)
+async def explain_article_relevance(
+    article_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Produce human-readable explanation of why an article was curated for the current user."""
+    learner = InterestLearningService(db)
+    return await learner.explain_article_relevance(current_user.id, article_id)
 
 
 @router.get("", response_model=List[UserInterestResponse])
@@ -63,6 +146,14 @@ async def add_or_update_interest(
         preference_type=item.preference_type,
         source="USER_ACTION",
     )
+    # Also sync Phase 13 explicit interest profile
+    learner = InterestLearningService(db)
+    await learner.sync_explicit_interest(
+        user_id=current_user.id,
+        topic_id=interest.topic_id,
+        score=interest.interest_score,
+    )
+    await db.commit()
     return format_interest_response(interest)
 
 
@@ -74,6 +165,7 @@ async def bulk_update_interests(
 ):
     """Update multiple user interest preferences in a single request."""
     updated = []
+    learner = InterestLearningService(db)
     for item in payload.interests:
         interest = await InterestService.set_user_interest(
             session=db,
@@ -83,7 +175,13 @@ async def bulk_update_interests(
             preference_type=item.preference_type,
             source="USER_ACTION",
         )
+        await learner.sync_explicit_interest(
+            user_id=current_user.id,
+            topic_id=interest.topic_id,
+            score=interest.interest_score,
+        )
         updated.append(format_interest_response(interest))
+    await db.commit()
     return updated
 
 
@@ -105,3 +203,4 @@ async def remove_interest(
             detail=f"No interest preference found for topic '{topic_slug}'",
         )
     return {"message": f"Interest for topic '{topic_slug}' successfully removed."}
+

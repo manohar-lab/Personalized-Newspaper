@@ -135,6 +135,31 @@ class Settings(BaseSettings):
     LOW_ENGAGEMENT_THRESHOLD_SECONDS: float = Field(default=30.0)
     DEEP_READ_DURATION_SECONDS: float = Field(default=180.0)
 
+    # Phase 13: Dynamic User Interest Intelligence Engine Settings
+    INTEREST_LEARNING_INTERVAL_MINUTES: int = Field(default=30)
+    INTEREST_DECAY_HALF_LIFE_DAYS: float = Field(default=30.0)
+    MIN_DISCOVERY_EVIDENCE: int = Field(default=5)
+    PROPAGATION_PARENT_WEIGHT: float = Field(default=0.50)
+    PROPAGATION_GRANDPARENT_WEIGHT: float = Field(default=0.25)
+
+    # Signal Weights
+    SIGNAL_WEIGHT_EXPLICIT_INTEREST: float = Field(default=1.00)
+    SIGNAL_WEIGHT_LIKE: float = Field(default=0.90)
+    SIGNAL_WEIGHT_SAVE: float = Field(default=0.85)
+    SIGNAL_WEIGHT_DEEP_READ: float = Field(default=0.75)
+    SIGNAL_WEIGHT_REPEAT_READ: float = Field(default=0.80)
+    SIGNAL_WEIGHT_NORMAL_READ: float = Field(default=0.35)
+    SIGNAL_WEIGHT_SEARCH: float = Field(default=0.25)
+    SIGNAL_WEIGHT_SHORT_READ: float = Field(default=-0.05)
+    SIGNAL_WEIGHT_BOUNCE: float = Field(default=-0.10)
+    SIGNAL_WEIGHT_NOT_INTERESTED: float = Field(default=-1.00)
+    SIGNAL_WEIGHT_ARTICLE_IMPRESSION: float = Field(default=0.00)
+
+    # State Thresholds
+    INTEREST_STRONG_THRESHOLD: float = Field(default=0.75)
+    INTEREST_STABLE_THRESHOLD: float = Field(default=0.50)
+    INTEREST_DORMANT_DAYS: int = Field(default=45)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

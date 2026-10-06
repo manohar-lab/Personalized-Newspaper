@@ -49,7 +49,19 @@ class PersonalizationService:
 
     async def get_user_interest_profile(self, user_id: uuid.UUID) -> UserInterestProfile:
         """Fetch user explicit and learned interests, entities, keywords, and cached semantic embedding vector."""
-        # 1. Topic Interests (Explicit + Learned Topics)
+        from app.models.interest_profile import UserInterestProfile as DynamicInterestProfile, UserTopicPreference
+
+        # 1. Fetch Dynamic Topic Interests (Phase 13)
+        stmt_dyn = (
+            select(DynamicInterestProfile)
+            .options(selectinload(DynamicInterestProfile.topic))
+            .where(DynamicInterestProfile.user_id == user_id)
+            .order_by(DynamicInterestProfile.score.desc())
+        )
+        res_dyn = await self.session.execute(stmt_dyn)
+        dynamic_profiles = list(res_dyn.scalars().all())
+
+        # Also fetch legacy UserInterest table (for backward compatibility)
         stmt = (
             select(UserInterest)
             .options(selectinload(UserInterest.topic))
@@ -59,20 +71,61 @@ class PersonalizationService:
         result = await self.session.execute(stmt)
         interests = list(result.scalars().all())
 
+        # Fetch Explicit Preferences (Negative/Positive)
+        stmt_pref = (
+            select(UserTopicPreference)
+            .options(selectinload(UserTopicPreference.topic))
+            .where(UserTopicPreference.user_id == user_id)
+        )
+        res_pref = await self.session.execute(stmt_pref)
+        topic_prefs = list(res_pref.scalars().all())
+
         positive_interests: Dict[str, float] = {}
         negative_interests: Dict[str, float] = {}
         topic_names_map: Dict[str, str] = {}
         topic_ids_map: Dict[str, uuid.UUID] = {}
 
+        # Load from dynamic profiles
+        for dp in dynamic_profiles:
+            if not dp.topic:
+                continue
+            slug = dp.topic.slug
+            topic_names_map[slug] = dp.topic.name
+            topic_ids_map[slug] = dp.topic.id
+            # Factor in confidence: effective score = score * confidence
+            eff_score = float(dp.score)
+            if dp.interest_type == "EXPLICIT":
+                positive_interests[slug] = max(positive_interests.get(slug, 0.0), eff_score)
+            else:
+                positive_interests[slug] = max(positive_interests.get(slug, 0.0), eff_score)
+
+        # Load from legacy UserInterest
         for ui in interests:
+            if not ui.topic:
+                continue
             slug = ui.topic.slug
             topic_names_map[slug] = ui.topic.name
             topic_ids_map[slug] = ui.topic.id
 
             if ui.preference_type == "POSITIVE":
-                positive_interests[slug] = float(ui.interest_score)
+                positive_interests[slug] = max(positive_interests.get(slug, 0.0), float(ui.interest_score))
             elif ui.preference_type == "NEGATIVE":
-                negative_interests[slug] = float(ui.interest_score)
+                negative_interests[slug] = max(negative_interests.get(slug, 0.0), float(ui.interest_score))
+
+        # Enforce Negative Topic Preferences (override/penalize)
+        for tp in topic_prefs:
+            if not tp.topic:
+                continue
+            slug = tp.topic.slug
+            topic_names_map[slug] = tp.topic.name
+            topic_ids_map[slug] = tp.topic.id
+            if tp.preference == "NEGATIVE":
+                negative_interests[slug] = max(negative_interests.get(slug, 0.0), float(tp.strength))
+                # Suppress positive entry
+                if slug in positive_interests:
+                    del positive_interests[slug]
+            elif tp.preference == "POSITIVE":
+                positive_interests[slug] = max(positive_interests.get(slug, 0.0), float(tp.strength))
 
         # 2. Learned Entities
         stmt_ent = (

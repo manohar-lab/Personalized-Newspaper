@@ -41,6 +41,25 @@ class RelevanceScorer:
             else settings.NEGATIVE_TOPIC_PENALTY
         )
 
+    @staticmethod
+    def _safe_get_rel(obj: Any, attr_name: str, default=None):
+        if isinstance(obj, dict):
+            return obj.get(attr_name, default if default is not None else [])
+        try:
+            from sqlalchemy import inspect as sa_inspect
+            insp = sa_inspect(obj, raise_errors=False)
+            if insp and hasattr(insp, "attrs") and attr_name in insp.attrs:
+                attr = insp.attrs[attr_name]
+                if attr.loaded_value is not None:
+                    return attr.loaded_value
+                return default if default is not None else []
+        except Exception:
+            pass
+        try:
+            return getattr(obj, attr_name, default if default is not None else [])
+        except Exception:
+            return default if default is not None else []
+
     def compute_relevance(
         self,
         article: Any,
@@ -57,33 +76,26 @@ class RelevanceScorer:
         has_user_interests = bool(positive_interests or negative_interests)
 
         # 1. Extract Article fields
-        topics = getattr(article, "topics", [])
-        if isinstance(article, dict):
-            topics = article.get("topics", [])
-
-        entities = getattr(article, "entities", [])
-        if isinstance(article, dict):
-            entities = article.get("entities", [])
-
-        keywords = getattr(article, "keywords", [])
-        if isinstance(article, dict):
-            keywords = article.get("keywords", [])
+        topics = self._safe_get_rel(article, "topics", [])
+        entities = self._safe_get_rel(article, "entities", [])
+        keywords = self._safe_get_rel(article, "keywords", [])
+        analysis = self._safe_get_rel(article, "analysis", None)
 
         # Importance score
-        importance = getattr(article, "importance_score", None)
-        if importance is None and hasattr(article, "analysis") and article.analysis:
-            importance = getattr(article.analysis, "importance_score", 0.5)
-        elif isinstance(article, dict):
+        importance = None
+        if isinstance(article, dict):
             importance = article.get("importance_score", 0.5)
+        elif analysis:
+            importance = getattr(analysis, "importance_score", 0.5)
         if importance is None:
             importance = 0.5
         importance = max(0.0, min(1.0, float(importance)))
 
         # Article Embedding
         article_embedding = None
-        if hasattr(article, "analysis") and article.analysis:
-            article_embedding = getattr(article.analysis, "embedding", None)
-        elif hasattr(article, "embedding"):
+        if analysis:
+            article_embedding = getattr(analysis, "embedding", None)
+        elif not isinstance(article, dict) and hasattr(article, "embedding"):
             article_embedding = getattr(article, "embedding")
         elif isinstance(article, dict):
             article_embedding = article.get("embedding")

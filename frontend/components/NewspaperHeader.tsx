@@ -13,6 +13,7 @@ import {
   Newspaper as NewspaperIcon,
   Menu,
   X,
+  Brain,
 } from "lucide-react";
 
 interface NewspaperHeaderProps {
@@ -116,6 +117,14 @@ export function NewspaperHeader({
             </Link>
 
             <Link
+              href="/interests"
+              className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
+            >
+              <Brain className="w-3.5 h-3.5 text-[#8C2524]" />
+              <span>Interests</span>
+            </Link>
+
+            <Link
               href="/history"
               className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
             >
@@ -137,7 +146,7 @@ export function NewspaperHeader({
                 className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2"
               >
                 <Sliders className="w-3.5 h-3.5" />
-                <span>My Interests</span>
+                <span>Quick Preferences</span>
               </button>
             )}
           </nav>
@@ -193,6 +202,14 @@ export function NewspaperHeader({
           >
             <NewspaperIcon className="w-4 h-4" />
             <span>Today's Edition</span>
+          </Link>
+          <Link
+            href="/interests"
+            onClick={() => setShowMobileMenu(false)}
+            className="py-2 px-3 hover:bg-[#F3ECE2] font-semibold text-[#181615] flex items-center gap-2"
+          >
+            <Brain className="w-4 h-4 text-[#8C2524]" />
+            <span>Interests Engine</span>
           </Link>
           <Link
             href="/history"

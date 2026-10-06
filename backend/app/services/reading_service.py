@@ -118,6 +118,16 @@ class ReadingService:
             metadata={"source_context": source_context, "session_id": str(session_id)},
             commit=False,
         )
+        # Phase 13 learning event
+        from app.ai.interests.signals import SignalManager, SignalType
+        await SignalManager.log_event(
+            session=self.db,
+            user_id=user_id,
+            signal_type=SignalType.ARTICLE_OPEN.value,
+            article_id=article_id,
+            source=source_context or "READER",
+            metadata={"session_id": str(session_id)},
+        )
 
         await self.db.commit()
         await self.db.refresh(session_obj)
@@ -409,6 +419,30 @@ class ReadingService:
                 "reading_engagement_signal": signal["reading_engagement_signal"],
             },
             commit=False,
+        )
+
+        # Phase 13 dynamic interest signal
+        from app.ai.interests.signals import SignalManager, SignalType
+        phase13_sig = SignalType.NORMAL_READ.value
+        if history.engagement_level == "DEEP":
+            phase13_sig = SignalType.DEEP_READ.value
+        elif history.engagement_level == "BOUNCED":
+            phase13_sig = SignalType.BOUNCE.value
+        elif history.open_count > 1:
+            phase13_sig = SignalType.REPEAT_READ.value
+
+        await SignalManager.log_event(
+            session=self.db,
+            user_id=user_id,
+            signal_type=phase13_sig,
+            article_id=article_id,
+            source=session_obj.source_context or "READER",
+            metadata={
+                "session_id": str(session_id),
+                "duration_seconds": duration,
+                "completion_percentage": session_obj.completion_percentage,
+                "engagement_level": history.engagement_level,
+            },
         )
 
         await self.db.commit()

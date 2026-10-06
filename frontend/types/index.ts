@@ -375,4 +375,69 @@ export interface ReadingMetrics {
   total_reading_history_count: number;
 }
 
+// ----------------------------------------------------------------------------
+// Phase 13: Dynamic User Interest Intelligence Engine Types
+// ----------------------------------------------------------------------------
+export type InterestStateType = "STRONG" | "EMERGING" | "STABLE" | "DECLINING" | "DORMANT";
+
+export interface DynamicInterestItem {
+  topic_id: string;
+  name: string;
+  slug: string;
+  score: number;
+  confidence: number;
+  interest_type: "EXPLICIT" | "LEARNED" | "INFERRED";
+  state: InterestStateType;
+  evidence_count: number;
+  positive_count: number;
+  negative_count: number;
+  last_positive_at?: string | null;
+  parent_topic_name?: string | null;
+}
+
+export interface TopicPreferenceItem {
+  topic_id: string;
+  name: string;
+  slug: string;
+  preference: "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+  strength: number;
+  confidence: number;
+}
+
+export interface EntityAffinityItem {
+  entity_id: string;
+  name: string;
+  score: number;
+  confidence: number;
+  evidence_count: number;
+}
+
+export interface DynamicProfileResponse {
+  user_id: string;
+  explicit_interests: DynamicInterestItem[];
+  strong_interests: DynamicInterestItem[];
+  emerging_interests: DynamicInterestItem[];
+  stable_interests: DynamicInterestItem[];
+  declining_interests: DynamicInterestItem[];
+  dormant_interests: DynamicInterestItem[];
+  avoided_topics: TopicPreferenceItem[];
+  top_entities: EntityAffinityItem[];
+  summary: string;
+}
+
+export interface ResetLearnedProfileResponse {
+  status: string;
+  message: string;
+  explicit_interests_preserved: number;
+}
+
+export interface RelevanceExplanationResponse {
+  article_id: string;
+  article_title: string;
+  explanation: string;
+  primary_factors: string[];
+  match_score: number;
+}
+
+
 

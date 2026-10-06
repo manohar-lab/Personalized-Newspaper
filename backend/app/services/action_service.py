@@ -36,13 +36,23 @@ class ActionService:
         await self.action_repo.add_action(
             user_id=user_id, article_id=article_id, action=ActionType.SAVE.value
         )
-        # Log learning event
+        # Log learning event (Phase 8/12)
         await self.learning_agent.process_event(
             user_id=user_id,
             event_type="ARTICLE_SAVE",
             article_id=article_id,
-            commit=True,
+            commit=False,
         )
+        # Log Phase 13 dynamic interest signal
+        from app.ai.interests.signals import SignalManager, SignalType
+        await SignalManager.log_event(
+            session=self.session,
+            user_id=user_id,
+            signal_type=SignalType.SAVE.value,
+            article_id=article_id,
+            source="USER_ACTION",
+        )
+        await self.session.commit()
         return UserActionResponse(
             success=True,
             action=ActionType.SAVE.value,
@@ -71,13 +81,23 @@ class ActionService:
         await self.action_repo.add_action(
             user_id=user_id, article_id=article_id, action=ActionType.LIKE.value
         )
-        # Log learning event
+        # Log learning event (Phase 8/12)
         await self.learning_agent.process_event(
             user_id=user_id,
             event_type="ARTICLE_LIKE",
             article_id=article_id,
-            commit=True,
+            commit=False,
         )
+        # Log Phase 13 dynamic interest signal
+        from app.ai.interests.signals import SignalManager, SignalType
+        await SignalManager.log_event(
+            session=self.session,
+            user_id=user_id,
+            signal_type=SignalType.LIKE.value,
+            article_id=article_id,
+            source="USER_ACTION",
+        )
+        await self.session.commit()
         return UserActionResponse(
             success=True,
             action=ActionType.LIKE.value,
@@ -92,13 +112,23 @@ class ActionService:
         await self.action_repo.add_action(
             user_id=user_id, article_id=article_id, action=ActionType.NOT_INTERESTED.value
         )
-        # Log learning event
+        # Log learning event (Phase 8/12)
         await self.learning_agent.process_event(
             user_id=user_id,
             event_type="ARTICLE_NOT_INTERESTED",
             article_id=article_id,
-            commit=True,
+            commit=False,
         )
+        # Log Phase 13 dynamic interest signal
+        from app.ai.interests.signals import SignalManager, SignalType
+        await SignalManager.log_event(
+            session=self.session,
+            user_id=user_id,
+            signal_type=SignalType.NOT_INTERESTED.value,
+            article_id=article_id,
+            source="USER_ACTION",
+        )
+        await self.session.commit()
         return UserActionResponse(
             success=True,
             action=ActionType.NOT_INTERESTED.value,

@@ -57,6 +57,17 @@ async def job_cleanup_old_data() -> Dict[str, Any]:
         return res
 
 
+async def job_interest_learning() -> Dict[str, Any]:
+    """Background job 6: Phase 13 Batch user dynamic interest learning."""
+    logger.info("Executing scheduled job: interest_learning")
+    from app.ai.interests.learner import InterestLearningService
+    async with AsyncSessionLocal() as session:
+        learner = InterestLearningService(session)
+        count = await learner.process_unprocessed_events()
+        logger.info(f"Finished interest_learning: processed={count} events")
+        return {"status": "success", "processed_events": count}
+
+
 async def job_full_pipeline() -> Dict[str, Any]:
     """Background job: Run full end-to-end pipeline."""
     logger.info("Executing full autonomous pipeline")
