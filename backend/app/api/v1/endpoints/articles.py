@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, Path, status
+from fastapi import APIRouter, Depends, Query, Path, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.api.deps import get_current_user, get_optional_current_user
@@ -13,6 +13,7 @@ from app.schemas.article import (
     ArticleListResponse,
 )
 from app.schemas.action import UserActionResponse
+from app.schemas.reading import ReadingHistoryItemResponse
 
 router = APIRouter()
 
@@ -120,3 +121,18 @@ async def mark_not_interested(
     """Mark an article as not interested."""
     service = ActionService(db)
     return await service.mark_not_interested(user_id=current_user.id, article_id=id)
+
+
+@router.get("/{id}/reading-history", response_model=Optional[ReadingHistoryItemResponse])
+async def get_article_reading_history(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get authenticated user's private reading history for this article."""
+    from app.services.reading_service import ReadingService
+    service = ReadingService(db)
+    history = await service.get_article_reading_history(user_id=current_user.id, article_id=id)
+    if not history:
+        raise HTTPException(status_code=404, detail="Reading history for this article not found")
+    return history

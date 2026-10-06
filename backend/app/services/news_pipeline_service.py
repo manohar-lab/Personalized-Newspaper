@@ -430,10 +430,13 @@ class NewsPipelineService:
 
             try:
                 cutoff = utc_now() - timedelta(days=retention_days)
-                # Delete old completed pipeline runs older than retention cutoff (preserve current run)
-                stmt = delete(PipelineRun).where(
-                    PipelineRun.created_at < cutoff,
-                    PipelineRun.id != run.id,
+                stmt = (
+                    delete(PipelineRun)
+                    .where(
+                        PipelineRun.created_at < cutoff,
+                        PipelineRun.id != run.id,
+                    )
+                    .execution_options(synchronize_session=False)
                 )
                 res = await self.session.execute(stmt)
                 deleted_count = res.rowcount if hasattr(res, "rowcount") else 0

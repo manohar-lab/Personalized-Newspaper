@@ -35,6 +35,7 @@ class BehaviorEventResponse(BaseModel):
 class ReadingStartRequest(BaseModel):
     """Payload to initiate a reading session."""
     article_id: uuid.UUID
+    source_context: Optional[str] = "DIRECT"
 
 
 class ReadingStartResponse(BaseModel):
@@ -44,6 +45,7 @@ class ReadingStartResponse(BaseModel):
     session_id: uuid.UUID
     article_id: uuid.UUID
     started_at: datetime
+    source_context: Optional[str] = "DIRECT"
 
 
 class ReadingEndRequest(BaseModel):
@@ -52,6 +54,9 @@ class ReadingEndRequest(BaseModel):
     article_id: uuid.UUID
     completion_percentage: Optional[float] = Field(
         default=None, description="Client-estimated scroll / completion percentage [0.0, 100.0]"
+    )
+    max_scroll_percentage: Optional[float] = Field(
+        default=None, description="Client-tracked max scroll percentage [0.0, 100.0]"
     )
 
 
@@ -65,6 +70,10 @@ class ReadingEndResponse(BaseModel):
     ended_at: datetime
     duration_seconds: float
     completion_percentage: float
+    max_scroll_percentage: float = 0.0
+    engagement_score: float = 0.0
+    engagement_level: str = "BOUNCED"
+    is_completed: bool = False
 
 
 class LearnedInterestItem(BaseModel):

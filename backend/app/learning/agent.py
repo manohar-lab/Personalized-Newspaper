@@ -437,7 +437,10 @@ class InterestLearningAgent:
             self.session.add(session_obj)
 
         session_obj.ended_at = now
-        duration = max(0.0, (now - session_obj.started_at).total_seconds())
+        started_at = session_obj.started_at
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        duration = max(0.0, (now - started_at).total_seconds())
         session_obj.duration_seconds = round(duration, 2)
 
         # Estimate completion if not supplied

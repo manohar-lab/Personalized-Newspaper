@@ -38,28 +38,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def check_database_connection() -> Dict[str, Any]:
     """
-    Performs real PostgreSQL database connection test.
-    Checks socket connection to PostgreSQL port and attempts query execution.
+    Performs database connection test by executing a simple query.
     """
     try:
-        # Check TCP connection on host and port
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1.0)
-        res = sock.connect_ex(("127.0.0.1", 5432))
-        sock.close()
-
-        if res == 0:
-            return {
-                "status": "connected",
-                "database": "postgresql",
-                "detail": "Successfully connected to PostgreSQL database instance on localhost:5432.",
-            }
-        else:
-            return {
-                "status": "disconnected",
-                "database": "postgresql",
-                "detail": "PostgreSQL service is unreachable on port 5432.",
-            }
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        return {
+            "status": "connected",
+            "database": "postgresql" if "postgresql" in settings.DATABASE_URL else "sqlite",
+            "detail": "Successfully connected to database instance.",
+        }
     except Exception as exc:
         logger.warning(f"Database health check failed: {str(exc)}")
         return {

@@ -11,6 +11,7 @@ from app.models.entity import Entity, article_entities
 from app.models.analysis import ArticleAnalysis, ArticleKeyword
 from app.models.pipeline_run import PipelineRun
 from app.models.search import UserSearchHistory
+from app.models.reading_history import ReadingHistory
 
 __all__ = [
     "Base",
@@ -31,6 +32,7 @@ __all__ = [
     "ArticleKeyword",
     "PipelineRun",
     "UserSearchHistory",
+    "ReadingHistory",
 ]
 
 

@@ -293,3 +293,86 @@ export interface SearchHistoryResponse {
   history: SearchHistoryItem[];
 }
 
+// Phase 12: Reading History & Engagement Intelligence Types
+export type EngagementLevel = "BOUNCED" | "LOW" | "MEDIUM" | "HIGH" | "DEEP";
+
+export interface ReadingStartResponse {
+  session_id: string;
+  article_id: string;
+  started_at: string;
+  source_context?: string;
+}
+
+export interface ReadingHeartbeatResponse {
+  session_id: string;
+  is_active: boolean;
+  total_session_duration: number;
+  max_scroll_percentage: number;
+  is_completed: boolean;
+}
+
+export interface ReadingEndResponse {
+  session_id: string;
+  article_id: string;
+  started_at: string;
+  ended_at: string;
+  duration_seconds: number;
+  completion_percentage: number;
+  max_scroll_percentage: number;
+  engagement_score: number;
+  engagement_level: EngagementLevel;
+  is_completed: boolean;
+}
+
+export interface ReadingHistoryItem {
+  id: string;
+  article_id: string;
+  article: Article;
+  first_opened_at: string;
+  last_opened_at: string;
+  last_read_at: string;
+  open_count: number;
+  total_duration_seconds: number;
+  max_scroll_percentage: number;
+  average_scroll_percentage: number;
+  completion_count: number;
+  last_completion_percentage: number;
+  engagement_score: number;
+  engagement_level: EngagementLevel;
+}
+
+export interface ReadingHistoryListResponse {
+  items: ReadingHistoryItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ContinueReadingItem {
+  article_id: string;
+  article: Article;
+  last_read_at: string;
+  progress_percentage: number;
+  max_scroll_percentage: number;
+  total_duration_seconds: number;
+  engagement_level: EngagementLevel;
+}
+
+export interface ContinueReadingListResponse {
+  items: ContinueReadingItem[];
+  total: number;
+}
+
+export interface ReadingMetrics {
+  average_reading_duration_seconds: number;
+  completion_rate_percentage: number;
+  average_scroll_depth_percentage: number;
+  bounce_rate_percentage: number;
+  deep_read_rate_percentage: number;
+  total_articles_completed: number;
+  total_sessions_count: number;
+  total_reading_history_count: number;
+}
+
+

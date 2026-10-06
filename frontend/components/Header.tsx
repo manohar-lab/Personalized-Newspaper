@@ -64,6 +64,12 @@ export const Header: React.FC<HeaderProps> = ({
           >
             🔎 Search Engine
           </a>
+          <a
+            href="/history"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
+          >
+            📖 Reading History
+          </a>
           <button
             type="button"
             onClick={user ? onOpenOnboarding : onOpenAuth}

@@ -6,7 +6,7 @@ and learned keyword interests.
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Optional
-from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, UUID, JSON, UniqueConstraint, Index
+from sqlalchemy import Column, String, Float, Integer, Boolean, DateTime, ForeignKey, UUID, JSON, UniqueConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
@@ -76,6 +76,14 @@ class ReadingSession(Base):
     )
     duration_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     completion_percentage: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    max_scroll_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    source_context: Mapped[Optional[str]] = mapped_column(
+        String(50), default="DIRECT", nullable=True
+    )  # NEWSPAPER | SEARCH | SAVED | DIRECT | OTHER
+    last_heartbeat_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

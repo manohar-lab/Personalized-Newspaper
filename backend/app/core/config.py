@@ -122,6 +122,19 @@ class Settings(BaseSettings):
     SEARCH_DEFAULT_PAGE_SIZE: int = Field(default=20)
     SEARCH_MAX_PAGE_SIZE: int = Field(default=50)
 
+    # Phase 12: Reading History & Engagement Intelligence System
+    MINIMUM_MEANINGFUL_READ_SECONDS: float = Field(default=10.0)
+    ARTICLE_COMPLETION_THRESHOLD: float = Field(default=85.0)
+    ENGAGEMENT_DURATION_WEIGHT: float = Field(default=0.30)
+    ENGAGEMENT_SCROLL_WEIGHT: float = Field(default=0.25)
+    ENGAGEMENT_COMPLETION_WEIGHT: float = Field(default=0.25)
+    ENGAGEMENT_RETURN_WEIGHT: float = Field(default=0.20)
+    READING_HISTORY_RETENTION_DAYS: int = Field(default=365)
+    HEARTBEAT_INTERVAL_SECONDS: int = Field(default=15)
+    BOUNCE_DURATION_THRESHOLD_SECONDS: float = Field(default=10.0)
+    LOW_ENGAGEMENT_THRESHOLD_SECONDS: float = Field(default=30.0)
+    DEEP_READ_DURATION_SECONDS: float = Field(default=180.0)
+
     # Database Configuration
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/personalized_newspaper"

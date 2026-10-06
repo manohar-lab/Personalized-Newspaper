@@ -38,9 +38,16 @@ class CandidateSelector:
         If fewer than min_candidates are available, expands to fallback window.
         Computes personal relevance scores using the user's interest profile.
         """
-        ref_time = target_date or datetime.now(timezone.utc)
-        if ref_time.tzinfo is None:
-            ref_time = ref_time.replace(tzinfo=timezone.utc)
+        now_utc = datetime.now(timezone.utc)
+        if target_date:
+            if target_date.tzinfo is None:
+                target_date = target_date.replace(tzinfo=timezone.utc)
+            if target_date.date() == now_utc.date():
+                ref_time = now_utc
+            else:
+                ref_time = target_date.replace(hour=23, minute=59, second=59)
+        else:
+            ref_time = now_utc
 
         # 1. Load user interest profile
         profile = await self.personalization_service.get_user_interest_profile(user_id)
@@ -86,7 +93,7 @@ class CandidateSelector:
             )
 
             # Retain non-negative relevance
-            if score > 0.0 or not profile.has_interests:
+            if score >= 0.0 or not profile.has_interests:
                 scored_candidates.append(
                     ScoredArticle(
                         article_id=item_art.id,

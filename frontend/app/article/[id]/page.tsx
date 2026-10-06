@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
 import { ArticleMetadata } from "@/components/ArticleMetadata";
@@ -17,6 +17,9 @@ import {
   likeArticle,
   unlikeArticle,
   markArticleNotInterested,
+  startReadingSession,
+  heartbeatReadingSession,
+  endReadingSession,
 } from "@/lib/api";
 import { ArticleDetail, User } from "@/types";
 import {
@@ -35,7 +38,9 @@ import {
 export default function ArticlePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const articleId = params?.id as string;
+  const sourceContext = searchParams.get("source") || "DIRECT";
 
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -52,10 +57,25 @@ export default function ArticlePage() {
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
 
+  // Reading Session & Engagement Tracking State
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [scrollProgress, setScrollProgress] = useState<number>(0);
+  const maxScrollRef = useRef<number>(0);
+  const activeSecondsRef = useRef<number>(0);
+  const isVisibleRef = useRef<boolean>(true);
+  const sessionIdRef = useRef<string | null>(null);
+  const articleIdRef = useRef<string>(articleId);
+  const tokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    articleIdRef.current = articleId;
+  }, [articleId]);
+
   useEffect(() => {
     const savedToken = localStorage.getItem("pn_auth_token");
     if (savedToken) {
       setToken(savedToken);
+      tokenRef.current = savedToken;
       fetchCurrentUser(savedToken)
         .then(setUser)
         .catch(() => {});
@@ -83,6 +103,120 @@ export default function ArticlePage() {
 
     loadArticle();
   }, [articleId, token]);
+
+  // Start Reading Session on Mount
+  useEffect(() => {
+    if (!articleId || !token) return;
+
+    let isCancelled = false;
+    startReadingSession(articleId, token, sourceContext)
+      .then((res) => {
+        if (!isCancelled && res.session_id) {
+          setSessionId(res.session_id);
+          sessionIdRef.current = res.session_id;
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to initiate reading session:", err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [articleId, token, sourceContext]);
+
+  // Tab Visibility & Active Reading Measurement
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isVisibleRef.current = document.visibilityState === "visible";
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Active Reading Timer (only increments when tab is actively visible)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isVisibleRef.current) {
+        activeSecondsRef.current += 1;
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Scroll Tracking
+  useEffect(() => {
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight - windowHeight;
+      if (documentHeight <= 0) return;
+
+      const currentScroll = Math.max(0, window.scrollY);
+      const pct = Math.min(100, Math.round((currentScroll / documentHeight) * 100));
+
+      setScrollProgress(pct);
+      if (pct > maxScrollRef.current) {
+        maxScrollRef.current = pct;
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Heartbeat (every 15s when tab is visible and session active)
+  useEffect(() => {
+    if (!sessionId || !token) return;
+
+    const interval = setInterval(() => {
+      if (isVisibleRef.current && sessionIdRef.current && tokenRef.current) {
+        heartbeatReadingSession(
+          sessionIdRef.current,
+          maxScrollRef.current,
+          activeSecondsRef.current,
+          tokenRef.current
+        ).catch((err) => {
+          console.warn("Reading heartbeat failed:", err);
+        });
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [sessionId, token]);
+
+  // End Session on Component Unmount or Tab Close
+  useEffect(() => {
+    const endCurrentSession = () => {
+      const currentSessionId = sessionIdRef.current;
+      const currentArticleId = articleIdRef.current;
+      const currentToken = tokenRef.current;
+
+      if (currentSessionId && currentArticleId && currentToken) {
+        endReadingSession(
+          currentSessionId,
+          currentArticleId,
+          maxScrollRef.current,
+          maxScrollRef.current,
+          currentToken
+        ).catch(() => {});
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      endCurrentSession();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      endCurrentSession();
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -158,6 +292,14 @@ export default function ArticlePage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF8F5] text-[#181615]">
+      {/* Subtle Top Reading Progress Indicator Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-1.5 bg-[#E5DDD0]/50 backdrop-blur-sm pointer-events-none">
+        <div
+          className="h-full bg-[#8C2524] transition-all duration-150 ease-out shadow-sm"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       <div>
         <NewspaperHeader
           user={user}
@@ -179,7 +321,7 @@ export default function ArticlePage() {
         )}
 
         <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8">
-          {/* Back to Newspaper Button */}
+          {/* Back to Newspaper Button & Reading Progress */}
           <div className="mb-6 flex items-center justify-between border-b border-[#E4DCCF] pb-3 font-sans">
             <Link
               href="/newspaper"
@@ -189,11 +331,24 @@ export default function ArticlePage() {
               <span>Back to Newspaper</span>
             </Link>
 
-            {article && (
-              <span className="text-xs text-[#7A7268] font-mono">
-                {article.language.toUpperCase()} • {article.reading_time_minutes} MIN READ
-              </span>
-            )}
+            <div className="flex items-center gap-4">
+              {/* Subtle Scroll Reading Progress Indicator */}
+              <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#7A7268]">
+                <div className="w-24 h-1.5 bg-[#E5DDD0] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#8C2524] transition-all duration-200"
+                    style={{ width: `${scrollProgress}%` }}
+                  />
+                </div>
+                <span className="font-semibold text-[#181615]">{scrollProgress}%</span>
+              </div>
+
+              {article && (
+                <span className="text-xs text-[#7A7268] font-mono">
+                  {article.language.toUpperCase()} • {article.reading_time_minutes} MIN READ
+                </span>
+              )}
+            </div>
           </div>
 
           {loading ? (

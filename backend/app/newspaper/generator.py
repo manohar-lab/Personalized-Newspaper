@@ -383,6 +383,10 @@ class NewspaperGenerationService:
             "email": user_obj.email if user_obj else "",
         }
 
+        gen_at = edition.generated_at
+        if gen_at and gen_at.tzinfo is None:
+            gen_at = gen_at.replace(tzinfo=timezone.utc)
+
         return NewspaperEditionResponse(
             id=edition.id,
             user_id=edition.user_id,
@@ -390,7 +394,7 @@ class NewspaperGenerationService:
             title=edition.title,
             subtitle=edition.subtitle,
             status=edition.status,
-            generated_at=edition.generated_at,
+            generated_at=gen_at,
             curation_summary=curation_summary,
             has_interests=profile.has_interests,
             lead_story=lead_story_response,
