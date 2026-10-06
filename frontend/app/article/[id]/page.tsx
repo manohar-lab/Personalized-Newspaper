@@ -22,8 +22,10 @@ import {
   endReadingSession,
   fetchMoreLikeThis,
   recordRecommendationInteraction,
+  fetchStoryCoverage,
+  reportArticle,
 } from "@/lib/api";
-import { ArticleDetail, User, RecommendationItem } from "@/types";
+import { ArticleDetail, User, RecommendationItem, StoryCoverageResponse } from "@/types";
 import {
   ArrowLeft,
   Bookmark,
@@ -36,6 +38,11 @@ import {
   ShieldAlert,
   Sparkles,
   Compass,
+  Layers,
+  Flag,
+  AlertTriangle,
+  Globe,
+  X,
 } from "lucide-react";
 
 export default function ArticlePage() {
@@ -63,6 +70,16 @@ export default function ArticlePage() {
   // More Like This recommendations
   const [moreLikeThis, setMoreLikeThis] = useState<RecommendationItem[]>([]);
   const [moreLikeThisLoading, setMoreLikeThisLoading] = useState(false);
+
+  // Phase 15 Story Cluster Coverage & Reporting State
+  const [coverage, setCoverage] = useState<StoryCoverageResponse | null>(null);
+  const [coverageLoading, setCoverageLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState<
+    "MISLEADING" | "LOW_QUALITY" | "BROKEN_ARTICLE" | "DUPLICATE" | "PAYWALL" | "OTHER"
+  >("LOW_QUALITY");
+  const [reportDetails, setReportDetails] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   // Reading Session & Engagement Tracking State
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -119,6 +136,16 @@ export default function ArticlePage() {
       .then((res) => setMoreLikeThis(res.recommendations || []))
       .catch(() => setMoreLikeThis([]))
       .finally(() => setMoreLikeThisLoading(false));
+  }, [articleId, token]);
+
+  // Phase 15: Load Story Cluster Coverage (perspectives across sources)
+  useEffect(() => {
+    if (!articleId) return;
+    setCoverageLoading(true);
+    fetchStoryCoverage(articleId, token || undefined)
+      .then((res) => setCoverage(res))
+      .catch(() => setCoverage(null))
+      .finally(() => setCoverageLoading(false));
   }, [articleId, token]);
 
   // Start Reading Session on Mount
@@ -304,6 +331,22 @@ export default function ArticlePage() {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
       showToast("Article link copied to clipboard");
+    }
+  };
+
+  const handleArticleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!article) return;
+    setSubmittingReport(true);
+    try {
+      await reportArticle(article.id, reportReason, reportDetails.trim() || undefined, token || undefined);
+      setShowReportModal(false);
+      setReportDetails("");
+      showToast("Thank you. Quality report recorded for editorial review.");
+    } catch {
+      showToast("Failed to submit article report");
+    } finally {
+      setSubmittingReport(false);
     }
   };
 
@@ -621,8 +664,83 @@ export default function ArticlePage() {
                     <ThumbsDown className="w-3.5 h-3.5" />
                     <span>{isNotInterested ? "Marked Not Interested" : "Not Interested"}</span>
                   </button>
+
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="px-3 py-2 border border-[#DCD3C7] text-[#7A7268] hover:border-amber-700 hover:text-amber-700 text-xs font-bold uppercase tracking-wider rounded-sm transition-colors flex items-center gap-1.5"
+                    title="Report article quality or paywall issue"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                    <span>Report</span>
+                  </button>
                 </div>
               </div>
+
+              {/* Phase 15: More Coverage — Multi-Perspective Story Cluster */}
+              {coverage && coverage.variants && coverage.variants.length > 1 && (
+                <section className="border-t-2 border-[#181615] pt-8 mt-12 mb-12">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-[#8C2524]" />
+                      <h3 className="font-editorial-heading font-bold text-2xl text-[#181615]">
+                        More Coverage
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs font-sans text-[#7A7268]">
+                      <span>{coverage.independent_sources_count} Independent Sources</span>
+                      <span>•</span>
+                      <span>Diversity: {Math.round(coverage.coverage_diversity_score * 100)}%</span>
+                    </div>
+                  </div>
+
+                  {coverage.has_conflicts && (
+                    <div className="p-4 bg-amber-50 border-l-4 border-amber-600 rounded-sm mb-6 text-xs font-sans text-amber-900 flex items-start gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold">Multi-Perspective Coverage Variant</p>
+                        <p className="text-amber-800 mt-0.5">{coverage.conflict_summary || "Different reports detected across coverage variants."}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {coverage.variants.filter((v) => v.article_id !== article.id).map((variant) => (
+                      <Link
+                        key={variant.article_id}
+                        href={`/article/${variant.article_id}`}
+                        className="group bg-white border border-[#E4DCCF] hover:border-[#181615] p-4 transition-all duration-200 hover:shadow-md flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2 text-[10px] font-sans">
+                            <span className="font-bold text-[#8C2524] uppercase tracking-wider">
+                              {variant.source_name || "Publisher"}
+                            </span>
+                            {variant.is_syndicated && (
+                              <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono text-[9px]">
+                                Syndicated Wire
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-editorial-heading font-bold text-base text-[#110F0E] leading-snug mb-2 group-hover:text-[#8C2524] transition-colors line-clamp-2">
+                            {variant.title}
+                          </h4>
+                          {variant.summary && (
+                            <p className="font-editorial-body text-xs text-[#5C554E] line-clamp-2 leading-relaxed">
+                              {variant.summary}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f0ebe1] text-[10px] font-sans text-[#7A7268]">
+                          <span>{variant.reading_time_minutes} min read</span>
+                          {variant.published_at && (
+                            <span>{new Date(variant.published_at).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Related Articles Section */}
               {article.related_articles && article.related_articles.length > 0 && (
@@ -745,6 +863,74 @@ export default function ArticlePage() {
           onClose={() => setShowInterestsModal(false)}
           token={token}
         />
+      )}
+
+      {/* Report Article Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-[#d6cebf] shadow-2xl relative font-sans">
+            <button
+              onClick={() => setShowReportModal(false)}
+              className="absolute right-4 top-4 p-2 rounded-full hover:bg-slate-100 text-[#78716c]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 text-amber-700 mb-2">
+              <Flag className="w-5 h-5" />
+              <h3 className="font-bold text-base text-[#1c1917]">Report Story Quality</h3>
+            </div>
+            <p className="text-xs text-[#57534e] mb-4">
+              Submit feedback for editorial review regarding formatting, paywalls, or accuracy.
+            </p>
+
+            <form onSubmit={handleArticleReportSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#1c1917] mb-1">Issue Category</label>
+                <select
+                  value={reportReason}
+                  onChange={(e: any) => setReportReason(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#d6cebf] text-sm text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]"
+                >
+                  <option value="LOW_QUALITY">Low Content Quality / Formatting</option>
+                  <option value="MISLEADING">Misleading / Clickbait Title</option>
+                  <option value="PAYWALL">Strict Subscriber Paywall</option>
+                  <option value="BROKEN_ARTICLE">Broken Link / Missing Body</option>
+                  <option value="DUPLICATE">Duplicate Syndicated Copy</option>
+                  <option value="OTHER">Other Editorial Concern</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#1c1917] mb-1">Optional Details</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the issue you encountered..."
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#d6cebf] text-sm text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-[#78716c] hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReport}
+                  className="px-5 py-2 rounded-lg text-xs font-medium bg-[#1c1917] text-white hover:bg-black transition-colors disabled:opacity-50"
+                >
+                  {submittingReport ? "Submitting..." : "Submit Report"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -98,6 +98,18 @@ async def job_generate_recommendations() -> Dict[str, Any]:
         return {"status": "success", "processed_users": processed_count}
 
 
+async def job_evaluate_sources() -> Dict[str, Any]:
+    """Background job 8: Phase 15 Periodic news source evaluation & quality recalculation."""
+    logger.info("Executing scheduled job: evaluate_sources")
+    from app.source_intelligence.source_evaluator import SourceEvaluationService
+
+    async with AsyncSessionLocal() as session:
+        eval_service = SourceEvaluationService(session)
+        evaluated = await eval_service.evaluate_all_sources()
+        logger.info(f"Finished evaluate_sources: evaluated={len(evaluated)} sources")
+        return {"status": "success", "evaluated_sources": len(evaluated)}
+
+
 async def job_full_pipeline() -> Dict[str, Any]:
     """Background job: Run full end-to-end pipeline."""
     logger.info("Executing full autonomous pipeline")

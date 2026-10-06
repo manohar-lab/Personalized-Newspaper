@@ -2,7 +2,7 @@
 
 import React from "react";
 import { BackendStatusBadge } from "./BackendStatusBadge";
-import { Newspaper, Sliders, User as UserIcon, LogOut, Sparkles, Brain, Compass } from "lucide-react";
+import { Newspaper, Sliders, User as UserIcon, LogOut, Sparkles, Brain, Compass, ShieldCheck } from "lucide-react";
 import { User } from "@/types";
 
 interface HeaderProps {
@@ -81,6 +81,12 @@ export const Header: React.FC<HeaderProps> = ({
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
             📖 Reading History
+          </a>
+          <a
+            href="/sources"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-red-700" /> Sources Directory
           </a>
           <button
             type="button"

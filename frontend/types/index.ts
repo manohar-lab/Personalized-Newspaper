@@ -485,4 +485,89 @@ export interface RecommendationInteractionRequest {
   context?: string;
 }
 
+// ----------------------------------------------------------------------------
+// Phase 15: Source Intelligence, Health, Preference & Story Coverage Types
+// ----------------------------------------------------------------------------
+export interface SourceItem {
+  id: string;
+  name: string;
+  slug: string;
+  website_url: string;
+  description?: string | null;
+  logo_url?: string | null;
+  is_active: boolean;
+  health_status: "HEALTHY" | "DEGRADED" | "FAILING" | "INACTIVE";
+  freshness_score: number;
+  quality_score: number;
+  quality_confidence: number;
+  reliability_score: number;
+  coverage_score: number;
+  extraction_success_rate: number;
+  duplicate_rate: number;
+  article_count: number;
+  is_following: boolean;
+  is_muted: boolean;
+  last_evaluated_at?: string | null;
+}
+
+export interface SourceDetail extends SourceItem {
+  recent_articles: {
+    id: string;
+    title: string;
+    slug: string;
+    published_at?: string | null;
+    reading_time_minutes: number;
+    extraction_status: string;
+  }[];
+  topics_covered: string[];
+  latest_update?: string | null;
+  feed_count: number;
+  daily_article_average: number;
+}
+
+export interface SourceListResponse {
+  sources: SourceItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ArticleCoverageItem {
+  article_id: string;
+  title: string;
+  slug: string;
+  source_id?: string | null;
+  source_name?: string | null;
+  source_url?: string | null;
+  published_at?: string | null;
+  is_syndicated: boolean;
+  is_primary: boolean;
+  quality_score: number;
+  summary?: string | null;
+  reading_time_minutes: number;
+  extraction_status: string;
+}
+
+export interface StoryCoverageResponse {
+  cluster_id?: string | null;
+  primary_article_id: string;
+  total_coverage_count: number;
+  independent_sources_count: number;
+  coverage_diversity_score: number;
+  has_conflicts: boolean;
+  conflict_summary?: string | null;
+  conflict_flag?: string | null;
+  variants: ArticleCoverageItem[];
+}
+
+export interface SourceReportRequest {
+  reason: "MISLEADING" | "LOW_QUALITY" | "BROKEN_ARTICLE" | "DUPLICATE" | "PAYWALL" | "OTHER";
+  details?: string;
+}
+
+export interface ArticleReportRequest {
+  reason: "MISLEADING" | "LOW_QUALITY" | "BROKEN_ARTICLE" | "DUPLICATE" | "PAYWALL" | "OTHER";
+  details?: string;
+}
+
 

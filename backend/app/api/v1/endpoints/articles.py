@@ -151,3 +151,36 @@ async def get_article_recommendations(
     user_id = current_user.id if current_user else uuid.uuid4()
     return await service.get_more_like_this(user_id=user_id, article_id=id, limit=limit)
 
+
+@router.get("/{id}/coverage")
+async def get_article_coverage(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get multi-perspective story cluster coverage, syndication analysis, and conflict flags."""
+    from app.source_intelligence.source_evaluator import SourceEvaluationService
+    eval_service = SourceEvaluationService(db)
+    return await eval_service.get_story_coverage(article_id=id)
+
+
+@router.post("/{id}/report", status_code=status.HTTP_201_CREATED)
+async def report_article(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    reason: str = Query(..., description="MISLEADING | LOW_QUALITY | BROKEN_ARTICLE | DUPLICATE | PAYWALL | OTHER"),
+    details: Optional[str] = Query(None, description="Optional details or context"),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit quality/accuracy/paywall feedback report for an article."""
+    from app.source_intelligence.source_evaluator import SourceEvaluationService
+    eval_service = SourceEvaluationService(db)
+    user_id = current_user.id if current_user else None
+    report = await eval_service.report_article(
+        article_id=id,
+        reason=reason,
+        details=details,
+        user_id=user_id,
+    )
+    return {"status": "success", "report_id": str(report.id), "message": "Article report recorded"}
+
+

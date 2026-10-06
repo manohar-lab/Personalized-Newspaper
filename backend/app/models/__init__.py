@@ -19,6 +19,13 @@ from app.models.interest_profile import (
     UserInterestSnapshot,
 )
 from app.recommendations.models import UserRecommendation
+from app.source_intelligence.models import (
+    SourceHealthMetric,
+    UserSourcePreference,
+    UserSourceAffinity,
+    SourceReport,
+    ArticleReport,
+)
 
 __all__ = [
     "Base",
@@ -45,6 +52,11 @@ __all__ = [
     "InterestLearningEvent",
     "UserInterestSnapshot",
     "UserRecommendation",
+    "SourceHealthMetric",
+    "UserSourcePreference",
+    "UserSourceAffinity",
+    "SourceReport",
+    "ArticleReport",
 ]
 
 

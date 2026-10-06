@@ -15,6 +15,7 @@ import {
   X,
   Brain,
   Compass,
+  ShieldCheck,
 } from "lucide-react";
 
 interface NewspaperHeaderProps {
@@ -149,6 +150,14 @@ export function NewspaperHeader({
               <span>Saved Stories</span>
             </Link>
 
+            <Link
+              href="/sources"
+              className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#8C2524]" />
+              <span>Sources</span>
+            </Link>
+
             {user && onOpenInterests && (
               <button
                 onClick={onOpenInterests}
@@ -243,6 +252,14 @@ export function NewspaperHeader({
           >
             <Bookmark className="w-4 h-4" />
             <span>Saved Stories</span>
+          </Link>
+          <Link
+            href="/sources"
+            onClick={() => setShowMobileMenu(false)}
+            className="py-2 px-3 hover:bg-[#F3ECE2] font-semibold text-[#181615] flex items-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4 text-[#8C2524]" />
+            <span>Sources Directory</span>
           </Link>
           {user && onOpenInterests && (
             <button

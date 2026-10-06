@@ -14,6 +14,7 @@ from app.workers.jobs import (
     job_cleanup_old_data,
     job_interest_learning,
     job_generate_recommendations,
+    job_evaluate_sources,
 )
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,17 @@ def start_scheduler() -> AsyncIOScheduler:
         trigger=IntervalTrigger(minutes=30),
         id="job_generate_recommendations",
         name="Batch Background Recommendation Generation",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # 8. News Source Evaluation Job (Phase 15)
+    _scheduler.add_job(
+        job_evaluate_sources,
+        trigger=IntervalTrigger(hours=24),
+        id="job_evaluate_sources",
+        name="Evaluate News Sources Quality & Health",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

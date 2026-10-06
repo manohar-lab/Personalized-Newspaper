@@ -75,11 +75,21 @@ class CandidateFilters:
         res_rec = await self.session.execute(stmt_rec)
         cooldown_ids = set(res_rec.scalars().all())
 
+        # 4. Muted sources
+        from app.source_intelligence.models import UserSourcePreference
+        stmt_muted = select(UserSourcePreference.source_id).where(
+            UserSourcePreference.user_id == user_id,
+            UserSourcePreference.is_muted == True,
+        )
+        res_muted = await self.session.execute(stmt_muted)
+        muted_source_ids = set(res_muted.scalars().all())
+
         return {
             "not_interested": not_interested_ids,
             "completed": completed_ids,
             "recently_read": recently_read_ids,
             "cooldown": cooldown_ids,
+            "muted_sources": muted_source_ids,
         }
 
     async def filter_candidates(
@@ -98,6 +108,7 @@ class CandidateFilters:
         completed = exclusions["completed"]
         recently_read = exclusions["recently_read"]
         cooldown = exclusions["cooldown"]
+        muted_sources = exclusions["muted_sources"]
 
         seen_ids: Set[uuid.UUID] = set()
         seen_titles: Set[str] = set()
@@ -129,6 +140,11 @@ class CandidateFilters:
 
             # 5. Cooldown check
             if exclude_cooldown and art_id in cooldown:
+                continue
+
+            # 5b. Muted source check
+            src_id = self._safe_get(art, "source_id")
+            if src_id and src_id in muted_sources:
                 continue
 
             # 6. Title / Canonical URL deduplication

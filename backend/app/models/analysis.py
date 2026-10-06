@@ -66,6 +66,10 @@ class ArticleAnalysis(Base):
     importance_score: Mapped[float] = mapped_column(
         Float, default=0.5, nullable=False
     )  # 0.0 to 1.0 (General importance/significance)
+    article_quality_score: Mapped[float] = mapped_column(
+        Float, default=0.5, nullable=False
+    )  # 0.0 to 1.0 (Content completeness, extraction quality, readability, metadata)
+    quality_breakdown: Mapped[Optional[Any]] = mapped_column(JSON, nullable=True)
     summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
     analysis_version: Mapped[str] = mapped_column(
