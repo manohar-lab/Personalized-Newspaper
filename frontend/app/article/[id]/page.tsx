@@ -20,8 +20,10 @@ import {
   startReadingSession,
   heartbeatReadingSession,
   endReadingSession,
+  fetchMoreLikeThis,
+  recordRecommendationInteraction,
 } from "@/lib/api";
-import { ArticleDetail, User } from "@/types";
+import { ArticleDetail, User, RecommendationItem } from "@/types";
 import {
   ArrowLeft,
   Bookmark,
@@ -33,6 +35,7 @@ import {
   BookOpen,
   ShieldAlert,
   Sparkles,
+  Compass,
 } from "lucide-react";
 
 export default function ArticlePage() {
@@ -56,6 +59,10 @@ export default function ArticlePage() {
 
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
+
+  // More Like This recommendations
+  const [moreLikeThis, setMoreLikeThis] = useState<RecommendationItem[]>([]);
+  const [moreLikeThisLoading, setMoreLikeThisLoading] = useState(false);
 
   // Reading Session & Engagement Tracking State
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -102,6 +109,16 @@ export default function ArticlePage() {
     };
 
     loadArticle();
+  }, [articleId, token]);
+
+  // Load "More like this" recommendations (separate from existing related_articles)
+  useEffect(() => {
+    if (!articleId) return;
+    setMoreLikeThisLoading(true);
+    fetchMoreLikeThis(articleId, token || undefined, 6)
+      .then((res) => setMoreLikeThis(res.recommendations || []))
+      .catch(() => setMoreLikeThis([]))
+      .finally(() => setMoreLikeThisLoading(false));
   }, [articleId, token]);
 
   // Start Reading Session on Mount
@@ -630,6 +647,78 @@ export default function ArticlePage() {
                     ))}
                   </div>
                 </section>
+              )}
+
+              {/* More Like This — AI-powered recommendations */}
+              {moreLikeThis.length > 0 && (
+                <section className="border-t border-[#DCD3C7] pt-8 mt-10">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-5 h-5 text-[#8C2524]" />
+                      <h3 className="font-editorial-heading font-bold text-xl text-[#181615]">
+                        More Like This
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-[#7A7268] font-mono uppercase tracking-wider font-sans">
+                      Recommended
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {moreLikeThis.map((rec) => (
+                      <Link
+                        key={rec.article_id}
+                        href={`/article/${rec.article_id}?source=RECOMMENDATION`}
+                        onClick={() => {
+                          if (token) {
+                            recordRecommendationInteraction(rec.article_id, "CLICK", token, "ARTICLE").catch(() => {});
+                          }
+                        }}
+                        className="group bg-white border border-[#E4DCCF] hover:border-[#181615] p-4 transition-all duration-200 hover:shadow-md"
+                      >
+                        {rec.image && (
+                          <div className="aspect-[16/9] overflow-hidden bg-[#E8E1D5] mb-3 -mx-4 -mt-4">
+                            <img src={rec.image} alt={rec.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          </div>
+                        )}
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8C2524] mb-1.5 font-sans">
+                          {rec.reason_text}
+                        </p>
+                        <h4 className="font-editorial-heading font-bold text-base text-[#110F0E] leading-snug mb-2 group-hover:text-[#8C2524] transition-colors line-clamp-2">
+                          {rec.title}
+                        </h4>
+                        {rec.summary && (
+                          <p className="font-editorial-body text-xs text-[#5C554E] line-clamp-2 leading-relaxed">
+                            {rec.summary}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2 text-[10px] text-[#7A7268] font-sans">
+                          {rec.source && <span className="font-semibold">{rec.source}</span>}
+                          {rec.reading_time && (
+                            <span className="flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {rec.reading_time} min
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {moreLikeThisLoading && (
+                <div className="border-t border-[#DCD3C7] pt-8 mt-10 animate-pulse">
+                  <div className="h-5 w-40 bg-[#E5DDD0] rounded mb-6" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="bg-white border border-[#E4DCCF] p-4 space-y-3">
+                        <div className="h-3 w-32 bg-[#E5DDD0] rounded" />
+                        <div className="h-5 w-full bg-[#DCD3C7] rounded" />
+                        <div className="h-3 w-3/4 bg-[#E5DDD0] rounded" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </article>
           )}

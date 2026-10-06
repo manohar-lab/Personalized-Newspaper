@@ -160,9 +160,10 @@ class CandidateFilters:
         scored_wrappers = []
         for art in candidates:
             wrapper = ScoredArticle(
+                article_id=art.id,
                 article=art,
                 relevance_score=0.5,
-                breakdown=RelevanceScoreBreakdown(),
+                breakdown=RelevanceScoreBreakdown(final_score=0.5),
             )
             scored_wrappers.append(wrapper)
 

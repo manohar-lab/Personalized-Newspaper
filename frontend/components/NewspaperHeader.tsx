@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Brain,
+  Compass,
 } from "lucide-react";
 
 interface NewspaperHeaderProps {
@@ -125,6 +126,14 @@ export function NewspaperHeader({
             </Link>
 
             <Link
+              href="/discover"
+              className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
+            >
+              <Compass className="w-3.5 h-3.5 text-[#8C2524]" />
+              <span>Discover</span>
+            </Link>
+
+            <Link
               href="/history"
               className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
             >
@@ -210,6 +219,14 @@ export function NewspaperHeader({
           >
             <Brain className="w-4 h-4 text-[#8C2524]" />
             <span>Interests Engine</span>
+          </Link>
+          <Link
+            href="/discover"
+            onClick={() => setShowMobileMenu(false)}
+            className="py-2 px-3 hover:bg-[#F3ECE2] font-semibold text-[#181615] flex items-center gap-2"
+          >
+            <Compass className="w-4 h-4 text-[#8C2524]" />
+            <span>Discover</span>
           </Link>
           <Link
             href="/history"

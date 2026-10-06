@@ -2,7 +2,7 @@
 
 import React from "react";
 import { BackendStatusBadge } from "./BackendStatusBadge";
-import { Newspaper, Sliders, User as UserIcon, LogOut, Sparkles, Brain } from "lucide-react";
+import { Newspaper, Sliders, User as UserIcon, LogOut, Sparkles, Brain, Compass } from "lucide-react";
 import { User } from "@/types";
 
 interface HeaderProps {
@@ -63,6 +63,12 @@ export const Header: React.FC<HeaderProps> = ({
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
             <Brain className="h-3.5 w-3.5 text-red-700" /> Interests Engine
+          </a>
+          <a
+            href="/discover"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
+          >
+            <Compass className="h-3.5 w-3.5 text-red-700" /> Discover
           </a>
           <a
             href="/search"

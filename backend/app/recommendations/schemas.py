@@ -20,8 +20,7 @@ class RecommendationItem(BaseModel):
     is_new: bool = Field(default=True)
     is_read: bool = Field(default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class RecommendationFeedResponse(BaseModel):

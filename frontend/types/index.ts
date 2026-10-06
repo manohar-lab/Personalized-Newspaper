@@ -439,5 +439,50 @@ export interface RelevanceExplanationResponse {
   match_score: number;
 }
 
+// ----------------------------------------------------------------------------
+// Phase 14: Personalized News Discovery & Recommendation Engine Types
+// ----------------------------------------------------------------------------
+export interface RecommendationItem {
+  article_id: string;
+  title: string;
+  summary?: string | null;
+  source?: string | null;
+  published_at?: string | null;
+  image?: string | null;
+  reading_time?: number | null;
+  recommendation_score_hidden: number;
+  reason_type: string;
+  reason_text: string;
+  section?: string | null;
+  is_new: boolean;
+  is_read: boolean;
+}
+
+export interface RecommendationFeedResponse {
+  total: number;
+  page: number;
+  limit: number;
+  context: string;
+  recommendations: RecommendationItem[];
+  recommended_for_you: RecommendationItem[];
+  trending_in_your_interests: RecommendationItem[];
+  discover_something_new: RecommendationItem[];
+}
+
+export interface TrendingForYouResponse {
+  total: number;
+  recommendations: RecommendationItem[];
+}
+
+export interface MoreLikeThisResponse {
+  article_id: string;
+  recommendations: RecommendationItem[];
+}
+
+export interface RecommendationInteractionRequest {
+  article_id: string;
+  interaction_type: "IMPRESSION" | "CLICK";
+  context?: string;
+}
 
 
