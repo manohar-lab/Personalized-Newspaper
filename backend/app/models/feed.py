@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, List
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, UUID
+from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, UUID, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
@@ -40,6 +40,20 @@ class NewsFeed(Base):
         nullable=True,
         index=True,
     )
+    # Phase 20 Feed Registry & Conditional Request Fields
+    etag: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    last_modified: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    http_status: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    health_status: Mapped[str] = mapped_column(
+        String(32), default="HEALTHY", nullable=False
+    )  # HEALTHY | DEGRADED | FAILING | DISABLED
+    poll_interval: Mapped[int] = mapped_column(Integer, default=3600, nullable=False)  # seconds
+    next_fetch_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    failure_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    success_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     last_fetched_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

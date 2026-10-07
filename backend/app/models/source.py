@@ -28,6 +28,24 @@ class NewsSource(Base):
     logo_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
+    # Phase 20 Source Registry & Health Fields
+    domain: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    homepage_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String(10), default="GLOBAL", nullable=True)
+    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+    source_type: Mapped[str] = mapped_column(
+        String(32), default="NEWS", nullable=False
+    )  # NEWS | BLOG | TECH | SCIENCE | BUSINESS | GOVERNMENT | ACADEMIC | OTHER
+    robots_status: Mapped[str] = mapped_column(
+        String(32), default="ALLOWED", nullable=False
+    )  # ALLOWED | BLOCKED | UNKNOWN | ERROR
+    independence_group: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    last_checked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_success_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_failure_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    success_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
     # Phase 15 Quality & Reliability Metrics
     quality_score: Mapped[float] = mapped_column(Float, default=0.50, nullable=False)
     quality_confidence: Mapped[float] = mapped_column(Float, default=0.05, nullable=False)
@@ -36,7 +54,9 @@ class NewsSource(Base):
     coverage_score: Mapped[float] = mapped_column(Float, default=0.50, nullable=False)
     extraction_success_rate: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     duplicate_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    health_status: Mapped[str] = mapped_column(String(32), default="HEALTHY", nullable=False)  # HEALTHY | DEGRADED | FAILING | INACTIVE
+    health_status: Mapped[str] = mapped_column(
+        String(32), default="HEALTHY", nullable=False
+    )  # HEALTHY | DEGRADED | FAILING | BLOCKED | DISABLED | INACTIVE
     last_evaluated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     evaluation_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
@@ -54,3 +74,4 @@ class NewsSource(Base):
     articles: Mapped[List["Article"]] = relationship(
         "Article", back_populates="source"
     )
+

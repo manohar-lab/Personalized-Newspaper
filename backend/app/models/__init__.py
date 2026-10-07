@@ -7,6 +7,7 @@ from app.models.action import UserArticleAction, ActionType
 from app.models.source import NewsSource
 from app.models.feed import NewsFeed
 from app.models.ingestion_run import IngestionRun
+from app.models.ingestion_job import IngestionJob
 from app.models.entity import Entity, article_entities
 from app.models.analysis import ArticleAnalysis, ArticleKeyword
 from app.models.pipeline_run import PipelineRun
@@ -67,6 +68,7 @@ __all__ = [
     "NewsSource",
     "NewsFeed",
     "IngestionRun",
+    "IngestionJob",
     "Entity",
     "article_entities",
     "ArticleAnalysis",

@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     briefings,
     news_sessions,
     profile_interests,
+    web_intelligence,
 )
 
 api_v1_router = APIRouter()
@@ -49,6 +50,8 @@ api_v1_router.include_router(admin_editorial.router, prefix="/admin/editorial", 
 api_v1_router.include_router(search.router, prefix="/search", tags=["Search"])
 api_v1_router.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
 api_v1_router.include_router(profile_interests.router, prefix="/profile", tags=["Profile Interests"])
+api_v1_router.include_router(web_intelligence.router, tags=["Web Intelligence"])
+
 
 
 
