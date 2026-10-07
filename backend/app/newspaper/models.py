@@ -1,4 +1,4 @@
-"""models.py — Phase 9 Persistent Newspaper Editions & Story Clusters Models."""
+"""models.py — Phase 17 Persistent Newspaper Editions, Sections & Stories Models."""
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
@@ -22,6 +22,7 @@ from app.models.base import Base
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.article import Article
+    from app.story_intelligence.models import Story
 
 
 def utc_now() -> datetime:
@@ -44,12 +45,16 @@ class NewspaperEdition(Base):
         String(10), index=True, nullable=False
     )  # YYYY-MM-DD
     title: Mapped[str] = mapped_column(
-        String(255), default="YOUR DAILY", nullable=False
+        String(255), default="PERSONAL DAILY", nullable=False
     )
     subtitle: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    editorial_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(30), default="READY", index=True, nullable=False
-    )  # GENERATING | READY | FAILED
+    )  # GENERATING | READY | STALE | FAILED
+    version: Mapped[int] = mapped_column(
+        Integer, default=1, index=True, nullable=False
+    )
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
@@ -61,6 +66,12 @@ class NewspaperEdition(Base):
     )
 
     user: Mapped["User"] = relationship("User", backref="newspaper_editions")
+    sections: Mapped[List["NewspaperSection"]] = relationship(
+        "NewspaperSection",
+        back_populates="edition",
+        cascade="all, delete-orphan",
+        order_by="NewspaperSection.display_order",
+    )
     stories: Mapped[List["NewspaperStory"]] = relationship(
         "NewspaperStory",
         back_populates="edition",
@@ -69,7 +80,39 @@ class NewspaperEdition(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("user_id", "edition_date", name="uq_user_edition_date"),
+        UniqueConstraint("user_id", "edition_date", "version", name="uq_user_edition_date_version"),
+    )
+
+
+class NewspaperSection(Base):
+    __tablename__ = "newspaper_sections"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    edition_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("newspaper_editions.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    section_type: Mapped[str] = mapped_column(
+        String(50), default="TOP_STORIES", index=True, nullable=False
+    )  # LEAD | TOP_STORIES | TECHNOLOGY | BUSINESS | SCIENCE | WORLD | INDIA | SPORTS | ENTERTAINMENT | DISCOVER | FOR_YOU
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    edition: Mapped["NewspaperEdition"] = relationship(
+        "NewspaperEdition", back_populates="sections"
+    )
+    stories: Mapped[List["NewspaperStory"]] = relationship(
+        "NewspaperStory",
+        back_populates="section_rel",
+        cascade="all, delete-orphan",
+        order_by="NewspaperStory.position",
     )
 
 
@@ -85,20 +128,38 @@ class NewspaperStory(Base):
         index=True,
         nullable=False,
     )
-    article_id: Mapped[uuid.UUID] = mapped_column(
+    story_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("stories.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+    section_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("newspaper_sections.id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
+    )
+    article_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("articles.id", ondelete="CASCADE"),
         index=True,
-        nullable=False,
+        nullable=True,
     )
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    editorial_role: Mapped[str] = mapped_column(
+        String(30), default="STANDARD", nullable=False
+    )  # LEAD | TOP_STORY | STANDARD | BRIEF | DISCOVERY | TRENDING | FOLLOW_UP
+    editorial_score: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Legacy & UI presentation properties
     section: Mapped[str] = mapped_column(
         String(100), default="TOP STORIES", index=True, nullable=False
-    )  # TOP STORIES | TECHNOLOGY | SCIENCE | BUSINESS | WORLD | HEALTH | SPORTS | ENTERTAINMENT | OTHER
-    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    )
     layout_type: Mapped[str] = mapped_column(
         String(30), default="STANDARD", nullable=False
-    )  # LEAD | FEATURE | STANDARD | COMPACT
-    editorial_score: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
+    )
     is_lead: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     personalization_reason: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
@@ -111,7 +172,11 @@ class NewspaperStory(Base):
     edition: Mapped["NewspaperEdition"] = relationship(
         "NewspaperEdition", back_populates="stories"
     )
-    article: Mapped["Article"] = relationship(
+    section_rel: Mapped[Optional["NewspaperSection"]] = relationship(
+        "NewspaperSection", back_populates="stories"
+    )
+    story: Mapped[Optional["Story"]] = relationship("Story")
+    article: Mapped[Optional["Article"]] = relationship(
         "Article", backref="newspaper_story_placements"
     )
 

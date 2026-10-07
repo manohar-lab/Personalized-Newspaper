@@ -3,13 +3,25 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { NewspaperStoryResponse } from "@/types";
-import { Bookmark, Heart, ThumbsDown, ArrowUpRight, Sparkles, Clock } from "lucide-react";
+import {
+  Bookmark,
+  Heart,
+  ThumbsDown,
+  ArrowUpRight,
+  Sparkles,
+  Clock,
+  Layers,
+  Flame,
+  RotateCw,
+  Compass,
+  Info,
+} from "lucide-react";
 import { saveArticle, unsaveArticle, likeArticle, unlikeArticle, markArticleNotInterested } from "@/lib/api";
 
 interface EditionStoryCardProps {
   story: NewspaperStoryResponse;
   token?: string | null;
-  layout?: "LEAD" | "FEATURE" | "STANDARD" | "COMPACT";
+  layout?: "LEAD" | "FEATURE" | "STANDARD" | "COMPACT" | "BRIEF";
   onActionComplete?: (action: string, articleId: string) => void;
 }
 
@@ -23,6 +35,7 @@ export function EditionStoryCard({
   const [isLiked, setIsLiked] = useState<boolean>(Boolean(story.is_liked));
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+  const [showWhyReason, setShowWhyReason] = useState<boolean>(false);
 
   const showFeedback = (msg: string) => {
     setFeedbackMsg(msg);
@@ -103,25 +116,36 @@ export function EditionStoryCard({
     );
   }
 
+  const reasonText = story.personalization_reason || "Selected by your Personal News Editor";
+
   // 1. LEAD STORY LAYOUT
   if (layout === "LEAD" || story.is_lead) {
     return (
-      <section className="bg-white border-2 border-[#181615] p-6 sm:p-8 lg:p-10 mb-8 shadow-sm relative">
+      <section className="bg-white border-2 border-[#181615] p-6 sm:p-8 lg:p-10 mb-8 shadow-md relative">
         <div className="flex flex-wrap items-center justify-between pb-3 mb-6 border-b border-[#E4DCCF] gap-2">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-[#181615] text-[#FAF8F5] text-xs font-bold uppercase tracking-widest">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-3 py-1 bg-[#8C2524] text-[#FAF8F5] text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-white animate-ping" />
               Lead Story
             </span>
-            {story.personalization_reason && (
+
+            {story.story_source_count && story.story_source_count > 1 ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[#EFE9DF] text-[#181615] text-[11px] font-bold rounded-sm border border-[#DCD3C7]">
+                <Layers className="w-3 h-3 text-[#8C2524]" />
+                <span>{story.story_source_count} Sources</span>
+              </span>
+            ) : null}
+
+            {reasonText && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FAF3EB] text-[#8C2524] text-[11px] font-medium rounded border border-[#EADBCC]">
                 <Sparkles className="w-3 h-3 text-[#8C2524]" />
-                <span>{story.personalization_reason}</span>
+                <span>{reasonText}</span>
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-3 text-xs text-[#6C645C]">
-            <span className="font-semibold text-[#181615]">{story.source_name}</span>
+            <span className="font-bold text-[#181615]">{story.source_name}</span>
             <span>•</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
@@ -147,13 +171,25 @@ export function EditionStoryCard({
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-4 mt-8 pt-5 border-t border-[#E8E1D5]">
-              <Link
-                href={`/article/${story.article_id}`}
-                className="px-6 py-3 bg-[#181615] text-[#FAF8F5] text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-[#8C2524] transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <span>Read Full Story</span>
-                <ArrowUpRight className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/article/${story.article_id}`}
+                  className="px-6 py-3 bg-[#181615] text-[#FAF8F5] text-xs sm:text-sm font-bold uppercase tracking-wider hover:bg-[#8C2524] transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <span>Read Full Story</span>
+                  <ArrowUpRight className="w-4 h-4" />
+                </Link>
+
+                {story.story_slug && (
+                  <Link
+                    href={`/stories/${story.story_slug}`}
+                    className="px-4 py-3 bg-[#F0EBE1] hover:bg-[#E4DCCF] text-[#181615] text-xs sm:text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5 border border-[#DCD3C7]"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Story Coverage</span>
+                  </Link>
+                )}
+              </div>
 
               <div className="flex items-center gap-2 font-sans">
                 {feedbackMsg && (
@@ -201,7 +237,7 @@ export function EditionStoryCard({
     );
   }
 
-  // 2. FEATURE STORY LAYOUT
+  // 2. FEATURE / TOP STORY LAYOUT
   if (layout === "FEATURE") {
     return (
       <article className="group bg-white p-5 border border-[#E4DCCF] hover:border-[#181615] hover:shadow-md transition-all flex flex-col justify-between">
@@ -219,12 +255,12 @@ export function EditionStoryCard({
 
           <div className="flex items-center justify-between gap-2 text-xs text-[#6C645C] mb-2">
             <span className="font-bold text-[#181615]">{story.source_name}</span>
-            {story.personalization_reason && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#8C2524] bg-[#FAF3EB] px-2 py-0.5 rounded border border-[#EADBCC] line-clamp-1">
-                <Sparkles className="w-3 h-3 shrink-0" />
-                <span className="truncate">{story.personalization_reason}</span>
+            {story.story_source_count && story.story_source_count > 1 ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#5A5046] bg-[#ECE6DA] px-2 py-0.5 rounded">
+                <Layers className="w-2.5 h-2.5" />
+                {story.story_source_count} sources
               </span>
-            )}
+            ) : null}
           </div>
 
           <Link href={`/article/${story.article_id}`} className="block mt-1">
@@ -237,6 +273,13 @@ export function EditionStoryCard({
             <p className="font-editorial-body text-sm text-[#4E473F] line-clamp-3 mt-2.5 leading-relaxed">
               {story.summary}
             </p>
+          )}
+
+          {reasonText && (
+            <div className="mt-3 pt-2 border-t border-[#F2EDE4] flex items-center gap-1.5 text-[11px] text-[#8C2524] italic">
+              <Sparkles className="w-3 h-3 shrink-0" />
+              <span className="line-clamp-1">{reasonText}</span>
+            </div>
           )}
         </div>
 
@@ -284,14 +327,14 @@ export function EditionStoryCard({
     );
   }
 
-  // 3. COMPACT STORY LAYOUT
-  if (layout === "COMPACT") {
+  // 3. BRIEF / COMPACT STORY LAYOUT
+  if (layout === "COMPACT" || layout === "BRIEF") {
     return (
-      <article className="group py-3.5 border-b border-[#E8E1D5] hover:bg-[#F7F3EB]/60 transition-colors">
+      <article className="group py-3 border-b border-[#E8E1D5] hover:bg-[#F7F3EB]/60 transition-colors">
         <div className="flex items-center justify-between text-[11px] text-[#7A7268] mb-1">
-          <span className="font-semibold text-[#181615]">{story.source_name}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
+          <span className="font-bold text-[#181615] uppercase tracking-wider">{story.source_name}</span>
+          <span className="flex items-center gap-1 text-[10px]">
+            <Clock className="w-2.5 h-2.5" />
             {story.reading_time_minutes}m
           </span>
         </div>
@@ -311,7 +354,7 @@ export function EditionStoryCard({
     );
   }
 
-  // 4. STANDARD STORY LAYOUT (Horizontal / Flex)
+  // 4. STANDARD STORY LAYOUT (Horizontal)
   return (
     <article className="group relative flex flex-col sm:flex-row gap-4 py-4 border-b border-[#E8E1D5] hover:bg-[#F7F3EB]/60 transition-colors">
       {story.top_image_url && (
@@ -328,11 +371,19 @@ export function EditionStoryCard({
       <div className="flex-1 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between gap-2 text-xs text-[#6C645C] mb-1.5">
-            <span className="font-bold text-[#181615]">{story.source_name}</span>
-            {story.personalization_reason && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-[#8C2524] bg-[#FAF3EB] px-2 py-0.5 rounded border border-[#EADBCC] line-clamp-1">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[#181615]">{story.source_name}</span>
+              {story.story_source_count && story.story_source_count > 1 ? (
+                <span className="text-[10px] bg-[#E8E1D5] px-1.5 py-0.5 rounded font-medium text-[#4B443D]">
+                  {story.story_source_count} sources
+                </span>
+              ) : null}
+            </div>
+
+            {reasonText && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#8C2524] bg-[#FAF3EB] px-2 py-0.5 rounded border border-[#EADBCC] line-clamp-1 max-w-[200px]">
                 <Sparkles className="w-3 h-3 shrink-0" />
-                <span className="truncate">{story.personalization_reason}</span>
+                <span className="truncate">{reasonText}</span>
               </span>
             )}
           </div>

@@ -88,14 +88,17 @@ class WebPageFetcher:
                     sockaddr = item[4]
                     resolved_ip_str = sockaddr[0]
                     resolved_ip = ipaddress.ip_address(resolved_ip_str)
-                    if (
+                    # Allow RFC 6052 NAT64 prefixes (64:ff9b::/96) if embedded IPv4 is not private
+                    is_nat64 = isinstance(resolved_ip, ipaddress.IPv6Address) and resolved_ip in ipaddress.IPv6Network("64:ff9b::/96")
+                    is_bad = (
                         resolved_ip.is_private
                         or resolved_ip.is_loopback
                         or resolved_ip.is_link_local
-                        or resolved_ip.is_reserved
+                        or (resolved_ip.is_reserved and not is_nat64)
                         or resolved_ip.is_multicast
                         or resolved_ip.is_unspecified
-                    ):
+                    )
+                    if is_bad:
                         return False, f"Resolved IP '{resolved_ip_str}' for host '{hostname}' is private/reserved"
             except socket.gaierror:
                 # DNS resolution failure will be handled by fetch request

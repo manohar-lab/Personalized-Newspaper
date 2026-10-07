@@ -91,7 +91,7 @@ class NewspaperGenerationService:
             )
         )
         result = await self.session.execute(stmt)
-        edition = result.scalar_one_or_none()
+        edition = result.scalars().first()
         if not edition:
             return None
 
@@ -102,6 +102,7 @@ class NewspaperGenerationService:
         user: Any = None,
         edition_date: Optional[str] = None,
         force_regenerate: bool = False,
+        force_refresh: bool = False,
         target_date: Optional[str] = None,
         user_id: Any = None,
     ) -> NewspaperEditionResponse:
@@ -109,6 +110,7 @@ class NewspaperGenerationService:
         target_date_str = (
             edition_date or target_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         )
+        force_regen = force_regenerate or force_refresh
         resolved_user = user if user is not None else user_id
         if hasattr(resolved_user, "id"):
             target_user_id = resolved_user.id
@@ -122,14 +124,19 @@ class NewspaperGenerationService:
         user_id = target_user_id
 
         # Check existing edition
-        stmt = select(NewspaperEdition).where(
-            NewspaperEdition.user_id == user_id,
-            NewspaperEdition.edition_date == target_date_str,
+        stmt = (
+            select(NewspaperEdition)
+            .where(
+                NewspaperEdition.user_id == user_id,
+                NewspaperEdition.edition_date == target_date_str,
+            )
+            .order_by(NewspaperEdition.version.desc())
+            .limit(1)
         )
         existing_result = await self.session.execute(stmt)
-        existing_edition = existing_result.scalar_one_or_none()
+        existing_edition = existing_result.scalars().first()
 
-        if existing_edition and not force_regenerate:
+        if existing_edition and not force_regen:
             return await self._format_edition_response(existing_edition, user_id)
 
         # 1. Candidate selection & personal relevance
@@ -249,8 +256,23 @@ class NewspaperGenerationService:
         self, edition: NewspaperEdition, user_id: uuid.UUID
     ) -> NewspaperEditionResponse:
         """Maps persistent models into the structured NewspaperEditionResponse."""
+        # Query stories with selectinload to avoid lazy loading issues
+        stmt_stories = (
+            select(NewspaperStory)
+            .options(
+                selectinload(NewspaperStory.article).selectinload(Article.analysis),
+                selectinload(NewspaperStory.article).selectinload(Article.topics),
+                selectinload(NewspaperStory.article).selectinload(Article.source),
+                selectinload(NewspaperStory.story),
+            )
+            .where(NewspaperStory.edition_id == edition.id)
+            .order_by(NewspaperStory.position.asc())
+        )
+        stories_res = await self.session.execute(stmt_stories)
+        edition_stories = list(stories_res.scalars().all())
+
         # Query user actions for articles in this edition
-        article_ids = [s.article_id for s in edition.stories]
+        article_ids = [s.article_id for s in edition_stories if s.article_id]
         actions_map = await self.action_repo.get_user_actions_map(user_id, article_ids)
 
         # Query Story Intelligence models for these articles
@@ -260,22 +282,23 @@ class NewspaperGenerationService:
             .join(Story, Story.id == StoryArticle.story_id)
             .where(StoryArticle.article_id.in_(article_ids))
         )
-        res_sa = await self.session.execute(stmt_story_art)
         story_info_map = {}
-        for sa, story_obj in res_sa.all():
-            story_info_map[sa.article_id] = {
-                "story_id": story_obj.id,
-                "story_slug": story_obj.slug,
-                "story_article_count": story_obj.article_count,
-                "story_source_count": story_obj.source_count,
-            }
+        if article_ids:
+            res_sa = await self.session.execute(stmt_story_art)
+            for sa, story_obj in res_sa.all():
+                story_info_map[sa.article_id] = {
+                    "story_id": story_obj.id,
+                    "story_slug": story_obj.slug,
+                    "story_article_count": story_obj.article_count,
+                    "story_source_count": story_obj.source_count,
+                }
 
         # Build story responses
         story_responses: List[NewspaperStoryResponse] = []
         sections_dict: Dict[str, List[NewspaperStoryResponse]] = {}
         lead_story_response: Optional[NewspaperStoryResponse] = None
 
-        for s in edition.stories:
+        for s in edition_stories:
             art = s.article
             acts = actions_map.get(art.id, set())
             if "NOT_INTERESTED" in acts or "DISLIKED" in acts:

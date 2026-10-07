@@ -31,6 +31,13 @@ from app.story_intelligence.models import (
     StoryArticle,
     StoryMergeEvent,
 )
+from app.newspaper.models import (
+    NewspaperEdition,
+    NewspaperSection,
+    NewspaperStory,
+    StoryCluster,
+    StoryClusterArticle,
+)
 
 __all__ = [
     "Base",
@@ -65,6 +72,11 @@ __all__ = [
     "Story",
     "StoryArticle",
     "StoryMergeEvent",
+    "NewspaperEdition",
+    "NewspaperSection",
+    "NewspaperStory",
+    "StoryCluster",
+    "StoryClusterArticle",
 ]
 
 

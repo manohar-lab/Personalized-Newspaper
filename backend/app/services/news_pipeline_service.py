@@ -351,24 +351,18 @@ class NewsPipelineService:
                 succeeded = 0
                 failed = 0
 
+                from app.editorial.editor import EditorialNewsroom
+                newsroom = EditorialNewsroom(self.session)
+
                 for u in users:
-                    # Determine target date for user
-                    if target_date:
-                        user_date_str = target_date
-                    else:
-                        tz_name = settings.DEFAULT_TIMEZONE
-                        try:
-                            tz = ZoneInfo(tz_name)
-                            user_now = datetime.now(tz)
-                            user_date_str = user_now.strftime("%Y-%m-%d")
-                        except Exception:
-                            user_date_str = utc_now().strftime("%Y-%m-%d")
+                    # Determine target date for user respecting their timezone
+                    user_date_str = target_date or newsroom.get_user_today_date_str(u)
 
                     try:
                         await self.newspaper_service.generate_daily_edition(
                             user_id=u.id,
-                            target_date=user_date_str,
-                            force_regenerate=False,
+                            edition_date=user_date_str,
+                            force_refresh=False,
                         )
                         succeeded += 1
                     except Exception as e:

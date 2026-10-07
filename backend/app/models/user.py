@@ -58,6 +58,7 @@ class UserProfile(Base):
     )
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     bio: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

@@ -15,8 +15,9 @@ import {
   fetchTodayEdition,
   regenerateTodayEdition,
 } from "@/lib/api";
-import { User, NewspaperEditionResponse } from "@/types";
-import { RefreshCw, Sparkles, Calendar, Layers } from "lucide-react";
+import { User, NewspaperEditionResponse, NewspaperSectionResponse } from "@/types";
+import { RefreshCw, Sparkles, Calendar, Layers, Newspaper, Compass, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function NewspaperPage() {
   const [token, setToken] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function NewspaperPage() {
       const refreshed = await regenerateTodayEdition(token);
       setEdition(refreshed);
     } catch (err: any) {
-      alert("Failed to regenerate edition: " + (err?.message || "Server error"));
+      alert("Failed to refresh edition: " + (err?.message || "Server error"));
     } finally {
       setRegenerating(false);
     }
@@ -104,7 +105,6 @@ export default function NewspaperPage() {
 
   const handleActionComplete = (action: string, articleId: string) => {
     if (action === "NOT_INTERESTED" && edition) {
-      // Remove story from sections and lead in local state
       const updatedSections = edition.sections.map((sec) => ({
         ...sec,
         stories: sec.stories.filter((s) => s.article_id !== articleId),
@@ -123,22 +123,32 @@ export default function NewspaperPage() {
     }
   };
 
-  // Filter sections by search query
-  const filteredSections = useMemo(() => {
-    if (!edition || !searchQuery.trim()) return edition?.sections || [];
-    const q = searchQuery.toLowerCase();
-    return edition.sections
-      .map((sec) => ({
-        ...sec,
-        stories: sec.stories.filter(
-          (s) =>
-            s.title.toLowerCase().includes(q) ||
-            s.summary?.toLowerCase().includes(q) ||
-            s.topics.some((t) => t.toLowerCase().includes(q))
-        ),
-      }))
-      .filter((sec) => sec.stories.length > 0);
-  }, [edition, searchQuery]);
+  // Split sections for broadsheet layout
+  const { topStoriesSection, forYouSection, discoverSection, domainSections } = useMemo(() => {
+    if (!edition?.sections) {
+      return { topStoriesSection: null, forYouSection: null, discoverSection: null, domainSections: [] };
+    }
+
+    let topStories: NewspaperSectionResponse | null = null;
+    let forYou: NewspaperSectionResponse | null = null;
+    let discover: NewspaperSectionResponse | null = null;
+    const domains: NewspaperSectionResponse[] = [];
+
+    for (const sec of edition.sections) {
+      const normName = sec.name.toUpperCase().replace(" ", "_");
+      if (normName === "TOP_STORIES") {
+        topStories = sec;
+      } else if (normName === "FOR_YOU") {
+        forYou = sec;
+      } else if (normName === "DISCOVER") {
+        discover = sec;
+      } else {
+        domains.push(sec);
+      }
+    }
+
+    return { topStoriesSection: topStories, forYouSection: forYou, discoverSection: discover, domainSections: domains };
+  }, [edition?.sections]);
 
   const formattedDate = useMemo(() => {
     if (!edition?.edition_date) {
@@ -175,38 +185,45 @@ export default function NewspaperPage() {
           onSearchChange={setSearchQuery}
         />
 
-        {/* Masthead Banner & Subtitle */}
+        {/* Masthead Banner & Editorial Summary */}
         {edition && (
           <div className="bg-[#F3EFE6] border-b border-[#E0D8C8]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#7A7268]">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#7A7268]">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{formattedDate}</span>
                   <span>•</span>
-                  <span>{edition.title || "YOUR DAILY"}</span>
+                  <span>{edition.title || "PERSONAL DAILY"}</span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <Layers className="w-3.5 h-3.5" />
                     {edition.total_stories} stories
                   </span>
+                  {edition.subtitle && (
+                    <>
+                      <span>•</span>
+                      <span className="text-[#8C2524] font-bold">{edition.subtitle}</span>
+                    </>
+                  )}
                 </div>
-                {edition.subtitle && (
-                  <p className="font-editorial-body text-sm text-[#4E473F] mt-1 italic">
-                    {edition.subtitle}
+
+                {edition.curation_summary && (
+                  <p className="font-editorial-body text-sm sm:text-base text-[#3A332C] mt-1.5 italic max-w-4xl leading-relaxed">
+                    &ldquo;{edition.curation_summary}&rdquo;
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={handleRegenerate}
                   disabled={regenerating}
                   className="px-3.5 py-1.5 bg-white hover:bg-[#FAF8F5] border border-[#181615] text-[#181615] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
-                  title="Regenerate today's edition with updated interests"
+                  title="Refresh edition with new updates"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? "animate-spin" : ""}`} />
-                  <span>{regenerating ? "Regenerating..." : "Regenerate"}</span>
+                  <span>{regenerating ? "Updating..." : "Refresh Edition"}</span>
                 </button>
 
                 <button
@@ -214,14 +231,14 @@ export default function NewspaperPage() {
                   className="px-3.5 py-1.5 bg-[#181615] hover:bg-[#8C2524] text-[#FAF8F5] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Edit Interests</span>
+                  <span>My Interests</span>
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Main Content Area */}
+        {/* Main Broadsheet Area */}
         <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
           {loading ? (
             <NewspaperSkeleton />
@@ -231,14 +248,14 @@ export default function NewspaperPage() {
               errorMessage={error}
               onRetry={() => (token ? loadUserAndEdition(token) : setShowAuthModal(true))}
             />
-          ) : !edition?.lead_story && filteredSections.length === 0 ? (
+          ) : !edition?.lead_story && (!edition?.sections || edition.sections.length === 0) ? (
             <EmptyNewspaperState
               type="no_articles"
               onRetry={() => (token ? loadUserAndEdition(token) : setShowAuthModal(true))}
             />
           ) : (
             <>
-              {/* User-Specific Lead Story */}
+              {/* 1. LEAD STORY */}
               {edition?.lead_story && !searchQuery && (
                 <EditionStoryCard
                   story={edition.lead_story}
@@ -248,9 +265,67 @@ export default function NewspaperPage() {
                 />
               )}
 
-              {/* Controlled Editorial Sections */}
+              {/* 2. BROADSHEET SPLIT: TOP STORIES & FOR YOU */}
+              {(topStoriesSection || forYouSection) && !searchQuery && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10 pb-8 border-b-2 border-[#181615]">
+                  {/* Top Stories Column */}
+                  {topStoriesSection && (
+                    <div className={forYouSection ? "lg:col-span-7" : "lg:col-span-12"}>
+                      <div className="flex items-baseline justify-between pb-2 mb-4 border-b-2 border-[#181615]">
+                        <h2 className="font-editorial-heading font-black text-xl text-[#181615] uppercase tracking-wider">
+                          Top Stories
+                        </h2>
+                        <span className="text-xs text-[#7A7268]">
+                          {topStoriesSection.stories.length} stories
+                        </span>
+                      </div>
+                      <div className="flex flex-col divide-y divide-[#E8E1D5]">
+                        {topStoriesSection.stories.map((story) => (
+                          <EditionStoryCard
+                            key={story.id}
+                            story={story}
+                            token={token}
+                            layout={story.layout_type === "FEATURE" ? "FEATURE" : "STANDARD"}
+                            onActionComplete={handleActionComplete}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* For You Column */}
+                  {forYouSection && (
+                    <div className={topStoriesSection ? "lg:col-span-5 bg-[#FAF3EA] p-5 border border-[#E8DDCF] rounded-sm self-start" : "lg:col-span-12"}>
+                      <div className="flex items-baseline justify-between pb-2 mb-4 border-b border-[#D8CCBD]">
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-[#8C2524]" />
+                          <h2 className="font-editorial-heading font-black text-xl text-[#8C2524] uppercase tracking-wider">
+                            For You
+                          </h2>
+                        </div>
+                        <span className="text-xs text-[#7A7268]">
+                          {forYouSection.stories.length} stories
+                        </span>
+                      </div>
+                      <div className="flex flex-col divide-y divide-[#EADFCF]">
+                        {forYouSection.stories.map((story) => (
+                          <EditionStoryCard
+                            key={story.id}
+                            story={story}
+                            token={token}
+                            layout="STANDARD"
+                            onActionComplete={handleActionComplete}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3. DOMAIN EDITORIAL SECTIONS (Technology, Business, Science, World, etc.) */}
               <div className="mt-8">
-                {filteredSections.map((sec) => (
+                {domainSections.map((sec) => (
                   <EditionSection
                     key={sec.name}
                     section={sec}
@@ -259,6 +334,38 @@ export default function NewspaperPage() {
                   />
                 ))}
               </div>
+
+              {/* 4. DISCOVER SECTION */}
+              {discoverSection && discoverSection.stories.length > 0 && !searchQuery && (
+                <section className="mt-12 mb-8 bg-[#F5F2EC] border-2 border-[#181615] p-6 sm:p-8">
+                  <div className="flex items-center justify-between pb-3 mb-6 border-b border-[#DCD4C7]">
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-5 h-5 text-[#8C2524]" />
+                      <h2 className="font-editorial-heading font-black text-xl sm:text-2xl text-[#181615] uppercase tracking-wider">
+                        Discover Something New
+                      </h2>
+                    </div>
+                    <Link
+                      href="/discover"
+                      className="text-xs font-bold uppercase tracking-wider text-[#8C2524] hover:underline flex items-center gap-1"
+                    >
+                      <span>Explore More</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {discoverSection.stories.map((story) => (
+                      <EditionStoryCard
+                        key={story.id}
+                        story={story}
+                        token={token}
+                        layout="FEATURE"
+                        onActionComplete={handleActionComplete}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
             </>
           )}
         </main>
