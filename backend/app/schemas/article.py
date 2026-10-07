@@ -43,6 +43,11 @@ class ArticleBase(BaseModel):
     is_liked: Optional[bool] = False
     is_not_interested: Optional[bool] = False
     relevance_score: Optional[float] = None
+    personal_relevance_reason: Optional[str] = None
+    what_changed: Optional[str] = None
+    story_id: Optional[uuid.UUID] = None
+    story_title: Optional[str] = None
+    updated_at: Optional[datetime] = None
 
 class ArticleDetailResponse(ArticleBase):
     related_articles: List[ArticleBase] = []

@@ -24,8 +24,13 @@ class ArticleService:
         article: Article,
         user_actions: Optional[set] = None,
         relevance_score: Optional[float] = None,
+        current_user: Optional[User] = None,
     ) -> ArticleBase:
         actions = user_actions or set()
+        topic_name = article.topics[0].name if article.topics else "General"
+        relevance_reason = (
+            f"Because you follow {topic_name}." if current_user else f"Featured in {topic_name}."
+        )
         return ArticleBase(
             id=article.id,
             title=article.title,
@@ -42,10 +47,13 @@ class ArticleService:
             image_url=article.image_url,
             published_at=article.published_at,
             created_at=article.created_at,
-            reading_time_minutes=article.reading_time_minutes,
+            updated_at=getattr(article, "updated_at", None) or article.created_at,
+            reading_time_minutes=article.reading_time_minutes or 3,
             status=article.status,
-            language=article.language,
+            language=article.language or "en",
             is_full_text_available=article.is_full_text_available,
+            extraction_status=getattr(article, "extraction_status", "SUCCESS" if article.content else "NOT_ATTEMPTED"),
+            extraction_method=getattr(article, "extraction_method", None),
             topics=[
                 TopicSummary(id=t.id, name=t.name, slug=t.slug)
                 for t in article.topics
@@ -54,6 +62,8 @@ class ArticleService:
             is_liked="LIKE" in actions,
             is_not_interested="NOT_INTERESTED" in actions,
             relevance_score=relevance_score,
+            personal_relevance_reason=relevance_reason,
+            what_changed=getattr(article, "what_changed", None),
         )
 
     async def get_published_articles(
@@ -127,12 +137,12 @@ class ArticleService:
 
         related_items = [
             self._map_article_to_schema(
-                r_art, user_actions=related_actions_map.get(r_art.id, set())
+                r_art, user_actions=related_actions_map.get(r_art.id, set()), current_user=current_user
             )
             for r_art in related_db_articles
         ]
 
-        base = self._map_article_to_schema(article, user_actions=user_actions)
+        base = self._map_article_to_schema(article, user_actions=user_actions, current_user=current_user)
         return ArticleDetailResponse(
             **base.model_dump(),
             related_articles=related_items,
@@ -154,4 +164,5 @@ class ArticleService:
                 current_user.id, article.id
             )
 
-        return self._map_article_to_schema(article, user_actions=user_actions)
+        return self._map_article_to_schema(article, user_actions=user_actions, current_user=current_user)
+

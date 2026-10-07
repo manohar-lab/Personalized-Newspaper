@@ -13,7 +13,13 @@ from app.schemas.article import (
     ArticleListResponse,
 )
 from app.schemas.action import UserActionResponse
-from app.schemas.reading import ReadingHistoryItemResponse
+from app.schemas.reading import (
+    ReadingHistoryItemResponse,
+    ArticleReadingStateResponse,
+    ReadingStartResponse,
+    ReadingHeartbeatResponse,
+    ReadingEndResponse,
+)
 
 router = APIRouter()
 
@@ -163,6 +169,80 @@ async def get_article_coverage(
     return await eval_service.get_story_coverage(article_id=id)
 
 
+@router.get("/{id}/reading-state", response_model=ArticleReadingStateResponse)
+async def get_article_reading_state(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get concise reading state for progress indicator and resume reading."""
+    from app.services.reading_service import ReadingService
+    service = ReadingService(db)
+    return await service.get_reading_state(user_id=current_user.id, article_id=id)
+
+
+@router.post("/{id}/reading/start", response_model=ReadingStartResponse, status_code=status.HTTP_201_CREATED)
+async def start_reading(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    source_context: Optional[str] = Query("DIRECT", description="Source context: NEWSPAPER | SEARCH | SAVED | DIRECT | OTHER"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Start an active reading session for this article."""
+    from app.services.reading_service import ReadingService
+    service = ReadingService(db)
+    session_obj = await service.start_reading_session(
+        user_id=current_user.id, article_id=id, source_context=source_context
+    )
+    return ReadingStartResponse(
+        session_id=session_obj.id,
+        article_id=session_obj.article_id,
+        started_at=session_obj.started_at,
+        source_context=session_obj.source_context,
+    )
+
+
+@router.post("/{id}/reading/progress", response_model=ReadingHeartbeatResponse, status_code=status.HTTP_200_OK)
+async def report_reading_progress(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    session_id: uuid.UUID = Query(..., description="Active ReadingSession UUID"),
+    scroll_percentage: float = Query(..., ge=0.0, le=100.0, description="Current scroll percentage"),
+    active_duration_seconds: Optional[float] = Query(None, ge=0.0, description="Active duration in seconds"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Report periodic reading heartbeat / scroll progress."""
+    from app.services.reading_service import ReadingService
+    service = ReadingService(db)
+    return await service.record_heartbeat(
+        user_id=current_user.id,
+        session_id=session_id,
+        scroll_percentage=scroll_percentage,
+        active_duration_seconds=active_duration_seconds,
+    )
+
+
+@router.post("/{id}/reading/complete", response_model=ReadingEndResponse, status_code=status.HTTP_200_OK)
+async def complete_reading(
+    id: uuid.UUID = Path(..., description="Article UUID"),
+    session_id: uuid.UUID = Query(..., description="Active ReadingSession UUID"),
+    completion_percentage: Optional[float] = Query(None, ge=0.0, le=100.0),
+    max_scroll_percentage: Optional[float] = Query(None, ge=0.0, le=100.0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Finalize reading session and deliver behavioral engagement signals."""
+    from app.services.reading_service import ReadingService
+    service = ReadingService(db)
+    return await service.end_reading_session(
+        user_id=current_user.id,
+        session_id=session_id,
+        article_id=id,
+        completion_percentage=completion_percentage,
+        max_scroll_percentage=max_scroll_percentage,
+    )
+
+
 @router.post("/{id}/report", status_code=status.HTTP_201_CREATED)
 async def report_article(
     id: uuid.UUID = Path(..., description="Article UUID"),
@@ -182,5 +262,6 @@ async def report_article(
         user_id=user_id,
     )
     return {"status": "success", "report_id": str(report.id), "message": "Article report recorded"}
+
 
 

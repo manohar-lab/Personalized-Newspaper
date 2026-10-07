@@ -131,3 +131,18 @@ class ReadingMetricsResponse(BaseModel):
     total_articles_completed: int
     total_sessions_count: int
     total_reading_history_count: int
+
+
+class ArticleReadingStateResponse(BaseModel):
+    """Article reading state for resuming and progress indicator."""
+    model_config = ConfigDict(from_attributes=True)
+
+    article_id: uuid.UUID
+    has_history: bool = False
+    last_scroll_percentage: float = 0.0
+    last_completion_percentage: float = 0.0
+    is_completed: bool = False
+    total_duration_seconds: float = 0.0
+    open_count: int = 0
+    last_read_at: Optional[datetime] = None
+

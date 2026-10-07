@@ -78,6 +78,8 @@ class StoryItem(BaseModel):
     has_conflicts: bool = False
     conflict_note: Optional[str] = None
     personal_score: Optional[float] = None
+    personal_relevance_reason: Optional[str] = None
+    what_changed: Optional[str] = None
 
 
 class StoryDetail(BaseModel):
@@ -105,6 +107,8 @@ class StoryDetail(BaseModel):
     has_conflicts: bool = False
     conflict_note: Optional[str] = None
     sources: List[str] = Field(default_factory=list)
+    personal_relevance_reason: Optional[str] = None
+    what_changed: Optional[str] = None
 
 
 class StoryCoverageResponse(BaseModel):

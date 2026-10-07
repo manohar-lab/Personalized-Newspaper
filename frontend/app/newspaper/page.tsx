@@ -126,12 +126,6 @@ export default function NewspaperPage() {
       setRegenerating(false);
     }
   };
-    } catch (err: any) {
-      alert("Failed to refresh edition: " + (err?.message || "Server error"));
-    } finally {
-      setRegenerating(false);
-    }
-  };
 
   const handleAuthSuccess = (newToken: string, newUser: User) => {
     localStorage.setItem("pn_auth_token", newToken);

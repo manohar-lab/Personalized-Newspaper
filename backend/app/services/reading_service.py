@@ -289,7 +289,8 @@ class ReadingService:
 
         session_obj.ended_at = now
         started_at = ensure_tz_aware(session_obj.started_at)
-        duration = max(0.0, (now - started_at).total_seconds())
+        elapsed = max(0.0, (now - started_at).total_seconds())
+        duration = max(elapsed, session_obj.duration_seconds or 0.0)
         session_obj.duration_seconds = round(duration, 2)
 
         # 2. Update scroll depth & completion
@@ -323,7 +324,7 @@ class ReadingService:
         # Determine completion flag
         is_completed = bool(
             (session_obj.completion_percentage >= settings.ARTICLE_COMPLETION_THRESHOLD or session_obj.max_scroll_percentage >= settings.ARTICLE_COMPLETION_THRESHOLD)
-            and duration >= settings.MINIMUM_MEANINGFUL_READ_SECONDS
+            and (duration >= settings.MINIMUM_MEANINGFUL_READ_SECONDS or session_obj.max_scroll_percentage >= settings.ARTICLE_COMPLETION_THRESHOLD)
         )
         session_obj.is_completed = is_completed
 
@@ -514,6 +515,36 @@ class ReadingService:
         )
         res = await self.db.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_reading_state(
+        self,
+        user_id: uuid.UUID,
+        article_id: uuid.UUID,
+    ) -> Dict[str, Any]:
+        """Fetch concise reading state for progress indicator and resume reading."""
+        history = await self.get_article_reading_history(user_id=user_id, article_id=article_id)
+        if not history:
+            return {
+                "article_id": article_id,
+                "has_history": False,
+                "last_scroll_percentage": 0.0,
+                "last_completion_percentage": 0.0,
+                "is_completed": False,
+                "total_duration_seconds": 0.0,
+                "open_count": 0,
+                "last_read_at": None,
+            }
+        return {
+            "article_id": article_id,
+            "has_history": True,
+            "last_scroll_percentage": history.max_scroll_percentage or 0.0,
+            "last_completion_percentage": history.last_completion_percentage or 0.0,
+            "is_completed": (history.completion_count > 0),
+            "total_duration_seconds": history.total_duration_seconds or 0.0,
+            "open_count": history.open_count or 0,
+            "last_read_at": history.last_read_at,
+        }
+
 
     async def get_continue_reading(
         self,

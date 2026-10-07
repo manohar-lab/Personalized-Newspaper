@@ -481,6 +481,20 @@ class StoryIntelligenceService:
 
         sources_list = sorted(list(set(it.source_name for it in article_items if it.source_name)))
 
+        # Determine personal relevance reason
+        topic_name = story.primary_topic.name if story.primary_topic else "Current Affairs"
+        if user_id:
+            personal_relevance_reason = f"Because you frequently read about {topic_name}."
+        else:
+            personal_relevance_reason = f"Featured coverage in {topic_name}."
+
+        # Determine what changed
+        what_changed = None
+        if len(article_items) > 1 and latest_item and primary_item and latest_item.id != primary_item.id:
+            what_changed = f"Latest development: {latest_item.title}. Previous coverage: {primary_item.title}."
+        elif story.status in ("DEVELOPING", "UPDATED", "BREAKING"):
+            what_changed = f"Story is developing with {story.source_count} sources monitoring live updates."
+
         return StoryDetail(
             id=story.id,
             title=story.title,
@@ -504,6 +518,8 @@ class StoryIntelligenceService:
             has_conflicts=has_conflicts,
             conflict_note=conflict_note,
             sources=sources_list,
+            personal_relevance_reason=personal_relevance_reason,
+            what_changed=what_changed,
         )
 
     async def get_story_coverage(self, identifier: str) -> Optional[StoryCoverageResponse]:
@@ -552,6 +568,7 @@ class StoryIntelligenceService:
             .options(
                 selectinload(Story.primary_topic),
                 selectinload(Story.primary_article),
+                selectinload(Story.latest_article),
             )
             .order_by(desc(Story.importance_score), desc(Story.last_updated_at))
             .limit(limit * 3)
@@ -666,6 +683,8 @@ class StoryIntelligenceService:
 
     @staticmethod
     def _story_to_item(story: Story, personal_score: Optional[float] = None) -> StoryItem:
+        p_art = story.primary_article
+        l_art = story.latest_article
         return StoryItem(
             id=story.id,
             title=story.title,
@@ -684,15 +703,15 @@ class StoryIntelligenceService:
             primary_article_id=story.primary_article_id,
             latest_article_id=story.latest_article_id,
             primary_article={
-                "id": str(story.primary_article.id),
-                "title": story.primary_article.title,
-                "url": story.primary_article.url,
-            } if story.primary_article else None,
+                "id": str(p_art.id),
+                "title": p_art.title,
+                "url": getattr(p_art, "source_url", getattr(p_art, "url", None)),
+            } if p_art else None,
             latest_article={
-                "id": str(story.latest_article.id),
-                "title": story.latest_article.title,
-                "url": story.latest_article.url,
-            } if story.latest_article else None,
+                "id": str(l_art.id),
+                "title": l_art.title,
+                "url": getattr(l_art, "source_url", getattr(l_art, "url", None)),
+            } if l_art else None,
             has_conflicts=False,
             conflict_note=None,
             personal_score=personal_score,

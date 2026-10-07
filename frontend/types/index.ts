@@ -103,6 +103,22 @@ export interface Article {
   is_liked?: boolean;
   is_not_interested?: boolean;
   relevance_score?: number | null;
+  personal_relevance_reason?: string | null;
+  what_changed?: string | null;
+  story_id?: string | null;
+  story_title?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ArticleReadingState {
+  article_id: string;
+  has_history: boolean;
+  last_scroll_percentage: number;
+  last_completion_percentage: number;
+  is_completed: boolean;
+  total_duration_seconds: number;
+  open_count: number;
+  last_read_at?: string | null;
 }
 
 export interface ArticleDetail extends Article {
@@ -639,6 +655,8 @@ export interface StoryItem {
   has_conflicts: boolean;
   conflict_note?: string | null;
   personal_score?: number | null;
+  personal_relevance_reason?: string | null;
+  what_changed?: string | null;
 }
 
 export interface StoryDetail {
@@ -664,6 +682,8 @@ export interface StoryDetail {
   has_conflicts: boolean;
   conflict_note?: string | null;
   sources: string[];
+  personal_relevance_reason?: string | null;
+  what_changed?: string | null;
 }
 
 export interface MultiSourceStoryCoverageResponse {
