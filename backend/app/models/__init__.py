@@ -67,6 +67,9 @@ from app.models.breaking_news import (
 from app.models.user_preferences import (
     UserNewspaperPreferences,
 )
+from app.models.personalization_settings import (
+    UserPersonalizationSettings,
+)
 
 __all__ = [
     "Base",
@@ -125,6 +128,7 @@ __all__ = [
     "BreakingNewsEvent",
     "BreakingNewsStatus",
     "UserNewspaperPreferences",
+    "UserPersonalizationSettings",
 ]
 
 

@@ -121,6 +121,17 @@ class BehavioralLearningEngine:
         # 1. Base Weight
         base_strength = self.BASE_SIGNAL_WEIGHTS.get(sig_upper, 0.20)
 
+        # Check if user has paused automatic learning
+        from app.models.personalization_settings import UserPersonalizationSettings
+        stmt_set = select(UserPersonalizationSettings.learning_enabled).where(
+            UserPersonalizationSettings.user_id == user_id
+        )
+        res_set = await self.session.execute(stmt_set)
+        learning_flag = res_set.scalar_one_or_none()
+        if learning_flag is False and sig_upper not in ("EXPLICIT_INTEREST", "NOT_INTERESTED"):
+            # When learning is paused, behavioral passive signals do not alter inferred profile
+            base_strength = 0.0
+
         # 2. Accidental Click Protection
         # If open duration < 5 seconds and completion < 5%, mark accidental with near-zero strength
         is_accidental = False
