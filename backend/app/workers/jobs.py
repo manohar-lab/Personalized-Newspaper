@@ -50,6 +50,20 @@ async def job_generate_daily_editions() -> Dict[str, Any]:
 newspaper_generation_job = job_generate_daily_editions
 
 
+async def job_generate_daily_briefings() -> Dict[str, Any]:
+    """Background job 4b: Phase 18 Generate daily news briefings for active users."""
+    logger.info("Executing scheduled job: generate_daily_briefings")
+    async with db_session_module.AsyncSessionLocal() as session:
+        service = NewsPipelineService(session)
+        res = await service.run_generate_daily_briefings()
+        logger.info(f"Finished generate_daily_briefings: status={res.get('status')}")
+        return res
+
+
+# Phase 18 job alias
+briefing_generation_job = job_generate_daily_briefings
+
+
 async def job_cleanup_old_data() -> Dict[str, Any]:
     """Background job 5: Clean up old temporary logs."""
     logger.info("Executing scheduled job: cleanup_old_data")

@@ -396,6 +396,96 @@ class NewsPipelineService:
                 return {"run_id": str(run.id), "status": "FAILED", "error": str(e)}
 
     # -------------------------------------------------------------------------
+    # 4b. Phase 18 Daily Briefing Generation Job
+    # -------------------------------------------------------------------------
+    async def run_generate_daily_briefings(
+        self,
+        target_date: Optional[str] = None,
+        batch_size: Optional[int] = None,
+        user_ids: Optional[List[uuid.UUID]] = None,
+    ) -> Dict[str, Any]:
+        """Automatically generates daily news briefings for active users according to their local timezone."""
+        batch_size = batch_size or settings.USER_BATCH_SIZE
+
+        run = PipelineRun(
+            job_type="GENERATE_BRIEFINGS",
+            status="RUNNING",
+            started_at=utc_now(),
+        )
+        self.session.add(run)
+        await self.session.commit()
+        await self.session.refresh(run)
+
+        async with try_acquire_job_lock(self.session, "generate_briefings") as acquired:
+            if not acquired:
+                run.status = "SKIPPED"
+                run.completed_at = utc_now()
+                run.error_message = "Job locked by another worker"
+                await self.session.commit()
+                return {"status": "SKIPPED", "message": "Job already running"}
+
+            try:
+                # Query active users
+                stmt = select(User).where(User.is_active == True)
+                if user_ids:
+                    stmt = stmt.where(User.id.in_(user_ids))
+                stmt = stmt.limit(batch_size)
+                res = await self.session.execute(stmt)
+                users = list(res.scalars().all())
+
+                if not users:
+                    run.status = "SUCCESS"
+                    run.completed_at = utc_now()
+                    run.details = json.dumps({"message": "No active users found"})
+                    await self.session.commit()
+                    return {"run_id": str(run.id), "status": "SUCCESS", "briefings_generated": 0}
+
+                succeeded = 0
+                failed = 0
+
+                from app.briefings.engine import PersonalNewsBriefingEngine
+                engine = PersonalNewsBriefingEngine(self.session)
+
+                for u in users:
+                    user_date_str = target_date or engine.get_user_today_date_str(u)
+                    try:
+                        await engine.generate_briefing(
+                            user_id=u.id,
+                            briefing_date=user_date_str,
+                            force_refresh=False,
+                        )
+                        succeeded += 1
+                    except Exception as e:
+                        logger.warning(f"Error generating briefing for user {u.id}: {e}")
+                        failed += 1
+
+                run.items_processed = len(users)
+                run.items_succeeded = succeeded
+                run.items_failed = failed
+                run.status = "SUCCESS" if failed == 0 else ("PARTIAL" if succeeded > 0 else "FAILED")
+                run.completed_at = utc_now()
+                run.details = json.dumps({
+                    "total_users": len(users),
+                    "succeeded": succeeded,
+                    "failed": failed,
+                })
+                await self.session.commit()
+                return {
+                    "run_id": str(run.id),
+                    "status": run.status,
+                    "total_users": len(users),
+                    "succeeded": succeeded,
+                    "failed": failed,
+                }
+            except Exception as e:
+                logger.error(f"Error during generate_daily_briefings job: {e}", exc_info=True)
+                run.status = "FAILED"
+                run.completed_at = utc_now()
+                run.error_message = str(e)
+                await self.session.commit()
+                return {"run_id": str(run.id), "status": "FAILED", "error": str(e)}
+
+    # -------------------------------------------------------------------------
     # 5. Cleanup Job
     # -------------------------------------------------------------------------
     async def run_cleanup_old_data(

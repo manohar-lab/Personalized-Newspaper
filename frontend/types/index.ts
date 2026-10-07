@@ -693,5 +693,51 @@ export interface StorySearchResponse {
   results: StoryItem[];
 }
 
+export interface BriefingItemResponse {
+  id: string;
+  briefing_id: string;
+  story_id?: string | null;
+  article_id?: string | null;
+  position: number;
+  briefing_type: "NEW" | "UPDATED" | "FOLLOW_UP" | "IMPORTANT" | "FOR_YOU" | "DISCOVERY" | string;
+  headline: string;
+  summary?: string | null;
+  reason?: string | null;
+  importance: number;
+  primary_category?: string | null;
+  topics?: string[];
+  source_name?: string | null;
+  source_count: number;
+  independent_source_count: number;
+  reading_time_minutes: number;
+  published_at?: string | null;
+  last_updated_at?: string | null;
+  url?: string | null;
+  top_image_url?: string | null;
+  is_read: boolean;
+  is_developing?: boolean;
+  created_at?: string | null;
+}
+
+export interface NewsBriefingResponse {
+  id: string;
+  user_id: string;
+  edition_id?: string | null;
+  briefing_date: string;
+  daypart: "MORNING" | "MIDDAY" | "EVENING" | "NIGHT" | string;
+  title: string;
+  greeting: string;
+  intro?: string | null;
+  status: string;
+  version: number;
+  is_caught_up: boolean;
+  total_items: number;
+  top_items: BriefingItemResponse[];
+  what_changed: BriefingItemResponse[];
+  items: BriefingItemResponse[];
+  generated_at: string;
+  last_session_at?: string | null;
+}
+
 
 

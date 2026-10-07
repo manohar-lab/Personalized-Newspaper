@@ -18,6 +18,8 @@ from app.api.v1.endpoints import (
     admin_sources,
     stories,
     admin_editorial,
+    briefings,
+    news_sessions,
 )
 
 api_v1_router = APIRouter()
@@ -36,6 +38,8 @@ api_v1_router.include_router(sources.router, prefix="/news/sources", tags=["Sour
 api_v1_router.include_router(sources.router, prefix="/sources", tags=["Sources"])
 api_v1_router.include_router(stories.router, prefix="/stories", tags=["Stories"])
 api_v1_router.include_router(stories.router, prefix="/news/stories", tags=["Stories"])
+api_v1_router.include_router(briefings.router, prefix="/briefings", tags=["Briefings"])
+api_v1_router.include_router(news_sessions.router, prefix="/news/sessions", tags=["News Sessions"])
 api_v1_router.include_router(behavior.router, prefix="/behavior", tags=["Behavior"])
 api_v1_router.include_router(reading.router, prefix="/reading", tags=["Reading"])
 api_v1_router.include_router(admin_pipeline.router, prefix="/admin/pipeline", tags=["Admin Pipeline"])

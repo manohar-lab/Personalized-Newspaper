@@ -10,12 +10,18 @@ import { AuthModal } from "@/components/AuthModal";
 import { Onboarding } from "@/components/Onboarding";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
+import { DailyBriefingHero } from "@/components/DailyBriefingHero";
 import {
   fetchCurrentUser,
   fetchTodayEdition,
   regenerateTodayEdition,
+  fetchTodayBriefing,
+  generateBriefing,
+  startNewsSession,
+  sendSessionHeartbeat,
+  endNewsSession,
 } from "@/lib/api";
-import { User, NewspaperEditionResponse, NewspaperSectionResponse } from "@/types";
+import { User, NewspaperEditionResponse, NewspaperSectionResponse, NewsBriefingResponse } from "@/types";
 import { RefreshCw, Sparkles, Calendar, Layers, Newspaper, Compass, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +29,10 @@ export default function NewspaperPage() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [edition, setEdition] = useState<NewspaperEditionResponse | null>(null);
+  const [briefing, setBriefing] = useState<NewsBriefingResponse | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState<boolean>(true);
+  const [briefingRefreshing, setBriefingRefreshing] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [regenerating, setRegenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +56,35 @@ export default function NewspaperPage() {
 
   const loadUserAndEdition = async (authToken: string) => {
     setLoading(true);
+    setBriefingLoading(true);
     setError(null);
     try {
       const u = await fetchCurrentUser(authToken);
       setUser(u);
-      const ed = await fetchTodayEdition(authToken);
-      setEdition(ed);
+
+      // Start news session
+      try {
+        const sess = await startNewsSession(authToken);
+        setSessionId(sess.session_id);
+      } catch (sessErr) {
+        console.warn("Could not start session:", sessErr);
+      }
+
+      // Fetch edition and briefing in parallel
+      const [ed, br] = await Promise.allSettled([
+        fetchTodayEdition(authToken),
+        fetchTodayBriefing(authToken),
+      ]);
+
+      if (ed.status === "fulfilled") {
+        setEdition(ed.value);
+      } else {
+        throw ed.reason;
+      }
+
+      if (br.status === "fulfilled") {
+        setBriefing(br.value);
+      }
     } catch (err: any) {
       console.warn("Error fetching newspaper edition:", err);
       if (err?.message?.includes("credentials") || err?.message?.includes("401")) {
@@ -64,6 +97,20 @@ export default function NewspaperPage() {
       }
     } finally {
       setLoading(false);
+      setBriefingLoading(false);
+    }
+  };
+
+  const handleRefreshBriefing = async () => {
+    if (!token) return;
+    setBriefingRefreshing(true);
+    try {
+      const refreshed = await generateBriefing(token, true);
+      setBriefing(refreshed);
+    } catch (err: any) {
+      console.warn("Failed to refresh briefing:", err);
+    } finally {
+      setBriefingRefreshing(false);
     }
   };
 
@@ -73,6 +120,12 @@ export default function NewspaperPage() {
     try {
       const refreshed = await regenerateTodayEdition(token);
       setEdition(refreshed);
+    } catch (err: any) {
+      alert("Failed to refresh edition: " + (err?.message || "Server error"));
+    } finally {
+      setRegenerating(false);
+    }
+  };
     } catch (err: any) {
       alert("Failed to refresh edition: " + (err?.message || "Server error"));
     } finally {
@@ -255,6 +308,16 @@ export default function NewspaperPage() {
             />
           ) : (
             <>
+              {/* PHASE 18: PERSONAL NEWS BRIEFING HERO */}
+              {!searchQuery && (
+                <DailyBriefingHero
+                  briefing={briefing}
+                  loading={briefingLoading}
+                  onRefresh={handleRefreshBriefing}
+                  refreshing={briefingRefreshing}
+                />
+              )}
+
               {/* 1. LEAD STORY */}
               {edition?.lead_story && !searchQuery && (
                 <EditionStoryCard

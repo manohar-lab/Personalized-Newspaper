@@ -84,7 +84,10 @@ class EditorialCandidateSelector:
             select(Story)
             .options(
                 selectinload(Story.primary_article).selectinload(Article.analysis),
+                selectinload(Story.primary_article).selectinload(Article.topics),
+                selectinload(Story.primary_article).selectinload(Article.entities),
                 selectinload(Story.latest_article).selectinload(Article.analysis),
+                selectinload(Story.latest_article).selectinload(Article.topics),
                 selectinload(Story.story_articles).selectinload(StoryArticle.article).selectinload(Article.analysis),
                 selectinload(Story.primary_topic),
             )

@@ -38,6 +38,14 @@ from app.newspaper.models import (
     StoryCluster,
     StoryClusterArticle,
 )
+from app.briefings.models import (
+    NewsBriefing,
+    NewsBriefingItem,
+    NewsSession,
+    BriefingStatus,
+    BriefingType,
+    Daypart,
+)
 
 __all__ = [
     "Base",
@@ -77,6 +85,12 @@ __all__ = [
     "NewspaperStory",
     "StoryCluster",
     "StoryClusterArticle",
+    "NewsBriefing",
+    "NewsBriefingItem",
+    "NewsSession",
+    "BriefingStatus",
+    "BriefingType",
+    "Daypart",
 ]
 
 
