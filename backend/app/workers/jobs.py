@@ -141,6 +141,22 @@ async def job_process_stories() -> Dict[str, Any]:
         return {"status": "success", "assigned_articles": assigned, "merged_stories": merged}
 
 
+async def job_behavior_learning() -> Dict[str, Any]:
+    """Background job: Phase 19 Advanced User Behavioral Learning Engine batch processing."""
+    logger.info("Executing scheduled job: behavior_learning")
+    from app.learning.behavioral_engine import BehavioralLearningEngine
+
+    async with db_session_module.AsyncSessionLocal() as session:
+        engine = BehavioralLearningEngine(session)
+        processed = await engine.process_batch_learning(limit=1000)
+        logger.info(f"Finished behavior_learning: processed={processed} evidence records")
+        return {"status": "success", "processed_evidence": processed}
+
+
+# Job alias
+behavior_learning_job = job_behavior_learning
+
+
 async def job_full_pipeline() -> Dict[str, Any]:
     """Background job: Run full end-to-end pipeline."""
     logger.info("Executing full autonomous pipeline")

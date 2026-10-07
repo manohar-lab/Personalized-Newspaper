@@ -739,5 +739,79 @@ export interface NewsBriefingResponse {
   last_session_at?: string | null;
 }
 
+// ----------------------------------------------------------------------------
+// Phase 19: Advanced User Behavioral Learning Engine Types
+// ----------------------------------------------------------------------------
+export interface TopicInterestItem {
+  topic_id: string;
+  topic_name: string;
+  topic_slug: string;
+  score: number;
+  raw_behavior_score: number;
+  confidence: number;
+  tier: "STRONG" | "GROWING" | "LOW_ENGAGEMENT" | "MUTED" | "NEUTRAL" | string;
+  short_term_score: number;
+  long_term_score: number;
+  positive_evidence_count: number;
+  negative_evidence_count: number;
+  distinct_stories_count: number;
+  distinct_sources_count: number;
+  explicit_override?: string | null;
+  last_signal_at?: string | null;
+  explanation: string;
+}
+
+export interface EntityInterestItem {
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+  score: number;
+  confidence: number;
+  positive_evidence_count: number;
+  negative_evidence_count: number;
+  explanation: string;
+}
+
+export interface KeywordInterestItem {
+  keyword: string;
+  score: number;
+  confidence: number;
+  interaction_count: number;
+}
+
+export interface StoryAffinityItem {
+  story_id: string;
+  story_title: string;
+  score: number;
+  expires_at: string;
+}
+
+export interface UserProfileInterestsResponse {
+  user_id: string;
+  strong_interests: TopicInterestItem[];
+  growing_interests: TopicInterestItem[];
+  low_engagement_topics: TopicInterestItem[];
+  muted_topics: TopicInterestItem[];
+  entity_preferences: EntityInterestItem[];
+  keyword_preferences: KeywordInterestItem[];
+  active_story_affinities: StoryAffinityItem[];
+  recent_trending_topics: string[];
+  exploration_factor: number;
+  entropy_balance: number;
+  last_rebuilt_at?: string | null;
+}
+
+export interface ProfileRebuildResponse {
+  user_id: string;
+  status: string;
+  evidence_events_processed: number;
+  topics_updated: number;
+  entities_updated: number;
+  keywords_updated: number;
+  duration_ms: number;
+  rebuilt_at: string;
+}
+
+
 
 

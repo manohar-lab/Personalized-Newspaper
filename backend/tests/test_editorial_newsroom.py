@@ -630,11 +630,11 @@ async def test_realistic_editorial_scenario(db_session: AsyncSession):
     await add_interest(db_session, user.id, top_tech.id, score=1.0)
 
     # Story A: Major AI
-    st_a = await create_story_with_articles(db_session, "Major AI Model Released", "TECHNOLOGY", top_ai, importance=0.88)
+    st_a = await create_story_with_articles(db_session, "Major AI Model Released", "TECHNOLOGY", top_ai, importance=0.92)
     # Story B: Minor AI
     st_b = await create_article_with_analysis(db_session, "Minor AI Framework Patch", "TECHNOLOGY", [top_ai], importance=0.50)
     # Story C: Major National Event
-    st_c = await create_story_with_articles(db_session, "Major National Summit Concludes", "WORLD", top_world, importance=0.95)
+    st_c = await create_story_with_articles(db_session, "Major National Summit Concludes", "WORLD", top_world, importance=0.98)
     # Story D: Finance
     st_d = await create_article_with_analysis(db_session, "Central Bank Holds Rate", "BUSINESS", [top_fin], importance=0.60)
     # Story E: Robotics (Discovery)

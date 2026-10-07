@@ -112,6 +112,36 @@ class PersonalizationService:
             elif ui.preference_type == "NEGATIVE":
                 negative_interests[slug] = max(negative_interests.get(slug, 0.0), float(ui.interest_score))
 
+        # 1.5. Fetch Phase 19 Unified Topic Behavior Preferences
+        from app.learning.evidence_models import (
+            UserTopicBehaviorPreference,
+            UserEntityBehaviorPreference,
+            UserKeywordBehaviorPreference,
+        )
+
+        stmt_beh = (
+            select(UserTopicBehaviorPreference)
+            .options(selectinload(UserTopicBehaviorPreference.topic))
+            .where(UserTopicBehaviorPreference.user_id == user_id)
+        )
+        res_beh = await self.session.execute(stmt_beh)
+        topic_behaviors = list(res_beh.scalars().all())
+
+        for tb in topic_behaviors:
+            if not tb.topic:
+                continue
+            slug = tb.topic.slug
+            topic_names_map[slug] = tb.topic.name
+            topic_ids_map[slug] = tb.topic.id
+
+            # If behavioral score is positive, map into positive interests factoring in confidence
+            if tb.score > 0:
+                norm_beh_score = min(1.0, 0.40 + 0.60 * ((tb.score + 1.0) / 2.0)) * max(0.40, tb.confidence)
+                positive_interests[slug] = max(positive_interests.get(slug, 0.0), norm_beh_score)
+            elif tb.score < -0.30 and tb.confidence >= 0.30:
+                neg_beh = abs(tb.score) * tb.confidence
+                negative_interests[slug] = max(negative_interests.get(slug, 0.0), neg_beh)
+
         # Enforce Negative Topic Preferences (override/penalize)
         for tp in topic_prefs:
             if not tp.topic:
@@ -127,7 +157,7 @@ class PersonalizationService:
             elif tp.preference == "POSITIVE":
                 positive_interests[slug] = max(positive_interests.get(slug, 0.0), float(tp.strength))
 
-        # 2. Learned Entities
+        # 2. Learned Entities (Phase 10 & Phase 19)
         stmt_ent = (
             select(UserEntityInterest)
             .options(selectinload(UserEntityInterest.entity))
@@ -136,10 +166,23 @@ class PersonalizationService:
         res_ent = await self.session.execute(stmt_ent)
         learned_entities = {
             ei.entity.normalized_name: ei.score
-            for ei in res_ent.scalars().all()
+            for ei in res_ent.scalars().all() if ei.entity
         }
 
-        # 3. Learned Keywords
+        stmt_ent_beh = (
+            select(UserEntityBehaviorPreference)
+            .options(selectinload(UserEntityBehaviorPreference.entity))
+            .where(UserEntityBehaviorPreference.user_id == user_id)
+        )
+        res_ent_beh = await self.session.execute(stmt_ent_beh)
+        for eb in res_ent_beh.scalars().all():
+            if eb.entity:
+                norm_e = (eb.score + 1.0) / 2.0
+                learned_entities[eb.entity.normalized_name] = max(
+                    learned_entities.get(eb.entity.normalized_name, 0.0), norm_e
+                )
+
+        # 3. Learned Keywords (Phase 10 & Phase 19)
         stmt_kw = (
             select(UserKeywordInterest)
             .where(UserKeywordInterest.user_id == user_id)
@@ -149,6 +192,16 @@ class PersonalizationService:
             ki.keyword: ki.score
             for ki in res_kw.scalars().all()
         }
+
+        stmt_kw_beh = (
+            select(UserKeywordBehaviorPreference)
+            .where(UserKeywordBehaviorPreference.user_id == user_id)
+        )
+        res_kw_beh = await self.session.execute(stmt_kw_beh)
+        for kb in res_kw_beh.scalars().all():
+            learned_keywords[kb.keyword] = max(
+                learned_keywords.get(kb.keyword, 0.0), (kb.score + 1.0) / 2.0
+            )
 
         has_interests = bool(positive_interests or negative_interests or learned_entities or learned_keywords)
 

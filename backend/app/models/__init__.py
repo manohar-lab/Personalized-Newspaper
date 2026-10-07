@@ -46,6 +46,13 @@ from app.briefings.models import (
     BriefingType,
     Daypart,
 )
+from app.learning.evidence_models import (
+    UserInterestEvidence,
+    UserTopicBehaviorPreference,
+    UserEntityBehaviorPreference,
+    UserStoryInterestSignal,
+    UserKeywordBehaviorPreference,
+)
 
 __all__ = [
     "Base",
@@ -91,6 +98,11 @@ __all__ = [
     "BriefingStatus",
     "BriefingType",
     "Daypart",
+    "UserInterestEvidence",
+    "UserTopicBehaviorPreference",
+    "UserEntityBehaviorPreference",
+    "UserStoryInterestSignal",
+    "UserKeywordBehaviorPreference",
 ]
 
 
