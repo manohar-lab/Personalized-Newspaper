@@ -67,7 +67,7 @@ briefing_generation_job = job_generate_daily_briefings
 async def job_cleanup_old_data() -> Dict[str, Any]:
     """Background job 5: Clean up old temporary logs."""
     logger.info("Executing scheduled job: cleanup_old_data")
-    async with AsyncSessionLocal() as session:
+    async with db_session_module.AsyncSessionLocal() as session:
         service = NewsPipelineService(session)
         res = await service.run_cleanup_old_data()
         logger.info(f"Finished cleanup_old_data: status={res.get('status')}")
@@ -78,7 +78,7 @@ async def job_interest_learning() -> Dict[str, Any]:
     """Background job 6: Phase 13 Batch user dynamic interest learning."""
     logger.info("Executing scheduled job: interest_learning")
     from app.ai.interests.learner import InterestLearningService
-    async with AsyncSessionLocal() as session:
+    async with db_session_module.AsyncSessionLocal() as session:
         learner = InterestLearningService(session)
         count = await learner.process_unprocessed_events()
         logger.info(f"Finished interest_learning: processed={count} events")
@@ -92,7 +92,7 @@ async def job_generate_recommendations() -> Dict[str, Any]:
     from app.models.user import User
     from app.recommendations.recommendation_service import RecommendationService
 
-    async with AsyncSessionLocal() as session:
+    async with db_session_module.AsyncSessionLocal() as session:
         stmt = select(User).where(User.is_active.is_(True))
         res = await session.execute(stmt)
         active_users = list(res.scalars().all())
@@ -120,7 +120,7 @@ async def job_evaluate_sources() -> Dict[str, Any]:
     logger.info("Executing scheduled job: evaluate_sources")
     from app.source_intelligence.source_evaluator import SourceEvaluationService
 
-    async with AsyncSessionLocal() as session:
+    async with db_session_module.AsyncSessionLocal() as session:
         eval_service = SourceEvaluationService(session)
         evaluated = await eval_service.evaluate_all_sources()
         logger.info(f"Finished evaluate_sources: evaluated={len(evaluated)} sources")
@@ -132,13 +132,42 @@ async def job_process_stories() -> Dict[str, Any]:
     logger.info("Executing scheduled job: process_stories")
     from app.story_intelligence.story_service import StoryIntelligenceService
 
-    async with AsyncSessionLocal() as session:
+    async with db_session_module.AsyncSessionLocal() as session:
         story_svc = StoryIntelligenceService(session)
         assigned = await story_svc.batch_process_unassigned_articles(limit=100)
         merged = await story_svc.auto_merge_candidate_stories()
         await session.commit()
         logger.info(f"Finished process_stories: assigned={assigned}, merged={merged}")
         return {"status": "success", "assigned_articles": assigned, "merged_stories": merged}
+
+
+async def job_detect_breaking_news() -> Dict[str, Any]:
+    """Background job 10: Phase 22 Detect breaking news and trigger personalized updates."""
+    logger.info("Executing scheduled job: detect_breaking_news")
+    from app.workers.breaking_news import BreakingNewsEngine
+
+    async with db_session_module.AsyncSessionLocal() as session:
+        engine = BreakingNewsEngine(session)
+        events = await engine.detect_breaking_stories()
+        total_matched_users = 0
+        for evt in events:
+            users = await engine.get_relevant_users_for_breaking_event(evt)
+            total_matched_users += len(users)
+
+        logger.info(f"Finished detect_breaking_news: events={len(events)}, matched_users={total_matched_users}")
+        return {"status": "success", "breaking_events": len(events), "matched_users": total_matched_users}
+
+
+async def job_cleanup_queue() -> Dict[str, Any]:
+    """Background job 11: Phase 22 Clean up old completed/failed job records."""
+    logger.info("Executing scheduled job: cleanup_queue")
+    from app.workers.queue import JobQueueService
+
+    async with db_session_module.AsyncSessionLocal() as session:
+        queue_svc = JobQueueService(session)
+        res = await queue_svc.cleanup_old_jobs()
+        logger.info(f"Finished cleanup_queue: {res}")
+        return {"status": "success", **res}
 
 
 async def job_behavior_learning() -> Dict[str, Any]:
@@ -160,10 +189,11 @@ behavior_learning_job = job_behavior_learning
 async def job_full_pipeline() -> Dict[str, Any]:
     """Background job: Run full end-to-end pipeline."""
     logger.info("Executing full autonomous pipeline")
-    async with AsyncSessionLocal() as session:
+    async with db_session_module.AsyncSessionLocal() as session:
         service = NewsPipelineService(session)
         res = await service.run_full_autonomous_pipeline()
         logger.info(f"Finished full pipeline: status={res.get('status')}")
         return res
+
 
 

@@ -22,6 +22,8 @@ from app.api.v1.endpoints import (
     news_sessions,
     profile_interests,
     web_intelligence,
+    editions,
+    admin_jobs,
 )
 
 api_v1_router = APIRouter()
@@ -34,7 +36,9 @@ api_v1_router.include_router(interests.router, prefix="/interests", tags=["Inter
 api_v1_router.include_router(onboarding.router, prefix="/onboarding", tags=["Onboarding"])
 api_v1_router.include_router(articles.router, prefix="/articles", tags=["Articles"])
 api_v1_router.include_router(newspaper.router, prefix="/newspaper", tags=["Newspaper"])
+api_v1_router.include_router(editions.router, prefix="/editions", tags=["Editions"])
 api_v1_router.include_router(users.router, prefix="/users/me", tags=["Users"])
+api_v1_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_v1_router.include_router(news.router, prefix="/news", tags=["News"])
 api_v1_router.include_router(sources.router, prefix="/news/sources", tags=["Sources"])
 api_v1_router.include_router(sources.router, prefix="/sources", tags=["Sources"])
@@ -47,10 +51,12 @@ api_v1_router.include_router(reading.router, prefix="/reading", tags=["Reading"]
 api_v1_router.include_router(admin_pipeline.router, prefix="/admin/pipeline", tags=["Admin Pipeline"])
 api_v1_router.include_router(admin_sources.router, prefix="/admin", tags=["Admin Sources"])
 api_v1_router.include_router(admin_editorial.router, prefix="/admin/editorial", tags=["Admin Editorial"])
+api_v1_router.include_router(admin_jobs.router, prefix="/admin", tags=["Admin Jobs & Scheduler"])
 api_v1_router.include_router(search.router, prefix="/search", tags=["Search"])
 api_v1_router.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
 api_v1_router.include_router(profile_interests.router, prefix="/profile", tags=["Profile Interests"])
 api_v1_router.include_router(web_intelligence.router, tags=["Web Intelligence"])
+
 
 
 

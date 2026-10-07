@@ -54,6 +54,19 @@ from app.learning.evidence_models import (
     UserStoryInterestSignal,
     UserKeywordBehaviorPreference,
 )
+from app.models.background_job import (
+    BackgroundJob,
+    JobStatus,
+    JobPriority,
+    JobType,
+)
+from app.models.breaking_news import (
+    BreakingNewsEvent,
+    BreakingNewsStatus,
+)
+from app.models.user_preferences import (
+    UserNewspaperPreferences,
+)
 
 __all__ = [
     "Base",
@@ -105,7 +118,15 @@ __all__ = [
     "UserEntityBehaviorPreference",
     "UserStoryInterestSignal",
     "UserKeywordBehaviorPreference",
+    "BackgroundJob",
+    "JobStatus",
+    "JobPriority",
+    "JobType",
+    "BreakingNewsEvent",
+    "BreakingNewsStatus",
+    "UserNewspaperPreferences",
 ]
+
 
 
 

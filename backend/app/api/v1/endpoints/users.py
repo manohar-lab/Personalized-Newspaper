@@ -95,3 +95,29 @@ async def clear_my_reading_history(
     await db.commit()
     return {"success": True, "message": "Reading history cleared successfully."}
 
+
+@router.get("/newspaper-preferences")
+async def get_newspaper_preferences(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get authenticated user's automated newspaper edition schedule and timezone settings."""
+    from app.services.preferences_service import PreferencesService
+    service = PreferencesService(db)
+    return await service.get_user_preferences(current_user.id)
+
+
+@router.put("/newspaper-preferences")
+async def update_newspaper_preferences(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update authenticated user's automated newspaper edition schedule and timezone settings."""
+    from app.services.preferences_service import PreferencesService
+    from app.schemas.preferences import UserNewspaperPreferencesUpdate
+    service = PreferencesService(db)
+    parsed = UserNewspaperPreferencesUpdate(**payload)
+    return await service.update_user_preferences(current_user.id, parsed)
+
+

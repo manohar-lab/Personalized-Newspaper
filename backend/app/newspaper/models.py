@@ -55,6 +55,15 @@ class NewspaperEdition(Base):
     version: Mapped[int] = mapped_column(
         Integer, default=1, index=True, nullable=False
     )
+    edition_type: Mapped[str] = mapped_column(
+        String(30), default="MORNING", index=True, nullable=False
+    )  # MORNING | MIDDAY | EVENING | BREAKING
+    supersedes_edition_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    published_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=True
+    )
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
