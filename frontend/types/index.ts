@@ -232,6 +232,7 @@ export interface NewspaperEditionResponse {
   lead_story?: NewspaperStoryResponse | null;
   sections: NewspaperSectionResponse[];
   total_stories: number;
+  curation_summary?: string | null;
 }
 
 // ----------------------------------------------------------------------------

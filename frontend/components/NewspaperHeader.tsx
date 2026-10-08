@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 interface NewspaperHeaderProps {
-  user: User | null;
+  user?: User | null;
   onOpenAuth?: () => void;
   onOpenInterests?: () => void;
   onSignOut?: () => void;

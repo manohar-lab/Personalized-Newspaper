@@ -101,7 +101,9 @@ def setup_postgresql():
     # Create database if not existing
     print("Creating database 'personalized_newspaper'...")
     createdb_cmd = [createdb_exe, "-U", "postgres", "-h", "localhost", "-p", "5432", "personalized_newspaper"]
-    res = subprocess.run(createdb_cmd, capture_output=True, text=True)
+    env = os.environ.copy()
+    env["PGPASSWORD"] = "postgres"
+    res = subprocess.run(createdb_cmd, capture_output=True, text=True, env=env)
     print("createdb output:", res.stdout, res.stderr)
 
     print("PostgreSQL setup & start successfully completed!")
