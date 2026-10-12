@@ -24,6 +24,7 @@ class UserSearchHistory(Base):
         index=True,
     )
     query: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    normalized_query: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
     filters: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     result_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -31,3 +32,7 @@ class UserSearchHistory(Base):
     )
 
     user = relationship("User", backref="search_history")
+
+    @property
+    def searched_at(self) -> datetime:
+        return self.created_at

@@ -1,4 +1,4 @@
-"""query_parser.py — Phase 11 Deterministic Search Query Parser."""
+"""query_parser.py — Phase 24 Deterministic Search Query Parser & Understanding."""
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
@@ -12,20 +12,37 @@ KNOWN_TOPIC_SYNONYMS: Dict[str, str] = {
     "machine learning": "Machine Learning",
     "ml": "Machine Learning",
     "deep learning": "Machine Learning",
+    "robotics": "Robotics",
     "cybersecurity": "Cybersecurity",
     "security": "Cybersecurity",
     "technology": "Technology",
     "tech": "Technology",
     "science": "Science",
     "space": "Science",
+    "physics": "Science",
+    "biology": "Science",
+    "quantum": "Quantum Computing",
+    "quantum computing": "Quantum Computing",
+    "cloud": "Cloud Computing",
+    "cloud computing": "Cloud Computing",
+    "llm": "LLMs",
+    "llms": "LLMs",
+    "large language model": "LLMs",
+    "large language models": "LLMs",
     "finance": "Business",
     "business": "Business",
     "economy": "Business",
     "markets": "Business",
     "health": "Health",
     "medicine": "Health",
+    "healthcare": "Health",
+    "biotech": "Health",
     "sports": "Sports",
     "entertainment": "Entertainment",
+    "climate": "Science",
+    "energy": "Science",
+    "world": "World",
+    "politics": "Politics",
 }
 
 KNOWN_ENTITIES: List[str] = [
@@ -44,12 +61,20 @@ KNOWN_ENTITIES: List[str] = [
     "BBC",
     "CNN",
     "Bloomberg",
+    "Sam Altman",
+    "Jensen Huang",
+    "Elon Musk",
+    "Satya Nadella",
+    "Sundar Pichai",
 ]
+
+MAX_QUERY_LENGTH = 500
 
 
 class QueryParser:
     """
     Parses natural language search queries into structured search signals:
+    - Safe query normalization
     - Clean search keywords
     - Detected topic tags
     - Detected entity tags
@@ -57,11 +82,29 @@ class QueryParser:
     """
 
     @classmethod
+    def normalize_query(cls, raw_query: Optional[str]) -> str:
+        """
+        Safely normalizes raw query text:
+        - Handles None gracefully
+        - Trims leading/trailing whitespace
+        - Collapses repeated internal whitespace
+        - Enforces reasonable query length limit
+        """
+        if not raw_query:
+            return ""
+        # Truncate to maximum allowed length
+        truncated = raw_query[:MAX_QUERY_LENGTH].strip()
+        # Collapse whitespace
+        normalized = re.sub(r"\s+", " ", truncated)
+        return normalized
+
+    @classmethod
     def parse_query(cls, raw_query: str) -> Tuple[ParsedQueryInfo, Optional[datetime], Optional[datetime]]:
         """
         Parses query and returns (ParsedQueryInfo, date_from, date_to).
         """
-        if not raw_query or not raw_query.strip():
+        normalized = cls.normalize_query(raw_query)
+        if not normalized:
             return (
                 ParsedQueryInfo(
                     raw_query="",
@@ -75,7 +118,7 @@ class QueryParser:
                 None,
             )
 
-        text = raw_query.strip()
+        text = normalized
         lower_text = text.lower()
         now = datetime.now(timezone.utc)
         date_from: Optional[datetime] = None
@@ -91,9 +134,9 @@ class QueryParser:
                 (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0),
                 now.replace(hour=0, minute=0, second=0, microsecond=0),
             ),
-            (r"\b(this week|past week|last 7 days)\b", "last_7_days", now - timedelta(days=7), None),
-            (r"\b(this month|past month|last 30 days)\b", "last_30_days", now - timedelta(days=30), None),
-            (r"\b(past 24 hours|last 24 hours)\b", "last_24_hours", now - timedelta(hours=24), None),
+            (r"\b(past 24 hours|last 24 hours|24 hours|24h)\b", "last_24_hours", now - timedelta(hours=24), None),
+            (r"\b(this week|past week|last 7 days|7 days)\b", "last_7_days", now - timedelta(days=7), None),
+            (r"\b(this month|past month|last 30 days|30 days)\b", "last_30_days", now - timedelta(days=30), None),
         ]
 
         for pattern, label, d_from, d_to in date_patterns:
@@ -107,7 +150,9 @@ class QueryParser:
 
         # 2. Topic Detection
         detected_topics: List[str] = []
-        for phrase, canonical_topic in KNOWN_TOPIC_SYNONYMS.items():
+        # Sort synonyms by length descending so longer phrases match first
+        for phrase in sorted(KNOWN_TOPIC_SYNONYMS.keys(), key=len, reverse=True):
+            canonical_topic = KNOWN_TOPIC_SYNONYMS[phrase]
             pattern = rf"\b{re.escape(phrase)}\b"
             if re.search(pattern, lower_text):
                 if canonical_topic not in detected_topics:
@@ -121,12 +166,13 @@ class QueryParser:
                 if ent not in detected_entities:
                     detected_entities.append(ent)
 
-        # 4. Clean keywords
-        clean_text = re.sub(r"\s+", " ", text).strip()
+        # 4. Clean keywords (strip extra punctuation while keeping valid alphanumeric & hyphens)
+        clean_text = re.sub(r"[^\w\s\-\'\"]", " ", text)
+        clean_text = re.sub(r"\s+", " ", clean_text).strip()
 
         parsed_info = ParsedQueryInfo(
-            raw_query=raw_query,
-            clean_keywords=clean_text or raw_query.strip(),
+            raw_query=normalized,
+            clean_keywords=clean_text or normalized,
             detected_topics=detected_topics,
             detected_entities=detected_entities,
             detected_sources=[],

@@ -245,11 +245,16 @@ export interface SearchFilters {
   source?: string;
   date_from?: string;
   date_to?: string;
-  date_preset?: "today" | "yesterday" | "last_7_days" | "last_30_days" | string;
+  date_preset?: "today" | "yesterday" | "last_24_hours" | "last_7_days" | "last_30_days" | string;
   article_type?: string;
   language?: string;
   page?: number;
   page_size?: number;
+  sort_by?: "relevance" | "newest" | "importance" | string;
+  read_status?: "all" | "read" | "unread" | string;
+  saved_status?: "all" | "saved" | "unsaved" | string;
+  result_type?: "ALL" | "STORIES" | "ARTICLES" | "TOPICS" | "ENTITIES" | string;
+  deduplicate?: boolean;
 }
 
 export interface SearchResultItem {
@@ -257,6 +262,8 @@ export interface SearchResultItem {
   title: string;
   summary?: string | null;
   source_name?: string | null;
+  source_url?: string | null;
+  author?: string | null;
   published_at?: string | null;
   primary_category?: string | null;
   topics: string[];
@@ -264,12 +271,47 @@ export interface SearchResultItem {
   top_image_url?: string | null;
   reading_time_minutes: number;
   is_full_text_available: boolean;
+  is_paywalled?: boolean;
   full_text_score: number;
   semantic_score: number;
   search_score: number;
   personal_relevance_score?: number | null;
   final_score: number;
   match_explanation?: string | null;
+}
+
+export interface SearchStoryItem {
+  id: string;
+  title: string;
+  slug: string;
+  summary?: string | null;
+  article_count: number;
+  source_count: number;
+  status: string;
+  importance_score: number;
+  last_updated_at?: string | null;
+  first_published_at?: string | null;
+  primary_topic_name?: string | null;
+  read_story_link: string;
+}
+
+export interface SearchTopicItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  is_followed: boolean;
+  article_count: number;
+}
+
+export interface SearchEntityItem {
+  id: string;
+  name: string;
+  entity_type: string;
+  is_followed: boolean;
+  is_muted: boolean;
+  story_count: number;
+  article_count: number;
 }
 
 export interface ParsedQueryInfo {
@@ -288,13 +330,20 @@ export interface SearchResponse {
   page_size: number;
   total_pages: number;
   results: SearchResultItem[];
+  articles: SearchResultItem[];
+  stories: SearchStoryItem[];
+  topics: SearchTopicItem[];
+  entities: SearchEntityItem[];
+  total_counts?: Record<string, number>;
+  applied_filters?: Record<string, any>;
+  query_metadata?: Record<string, any>;
   parsed_query?: ParsedQueryInfo | null;
   execution_time_ms: number;
 }
 
 export interface SearchSuggestionItem {
   text: string;
-  type: "TOPIC" | "ENTITY" | "KEYWORD" | "RECENT" | string;
+  type: "TOPIC" | "ENTITY" | "STORY" | "KEYWORD" | "RECENT" | string;
   subtitle?: string | null;
 }
 
@@ -306,13 +355,28 @@ export interface SearchSuggestionsResponse {
 export interface SearchHistoryItem {
   id: string;
   query: string;
+  normalized_query?: string | null;
   filters?: string | null;
   result_count: number;
   created_at: string;
+  searched_at?: string | null;
 }
 
 export interface SearchHistoryResponse {
   history: SearchHistoryItem[];
+}
+
+export interface SearchRecentResponse {
+  recent: SearchHistoryItem[];
+}
+
+export interface SearchFiltersMetaResponse {
+  categories: string[];
+  date_presets: { label: string; value: string }[];
+  languages: string[];
+  sources: string[];
+  sort_options: { label: string; value: string }[];
+  result_types: { label: string; value: string }[];
 }
 
 // Phase 12: Reading History & Engagement Intelligence Types
