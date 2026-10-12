@@ -6,9 +6,17 @@ import Link from "next/link";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
 import { ArticleMetadata } from "@/components/ArticleMetadata";
 import { ArticleCard } from "@/components/ArticleCard";
-import { AuthModal } from "@/components/AuthModal";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
+import {
+  saveLocalArticle,
+  unsaveLocalArticle,
+  isLocalArticleSaved,
+  toggleLocalLikeArticle,
+  isLocalArticleLiked,
+  markLocalArticleDisliked,
+  recordLocalReading,
+} from "@/lib/localStorageData";
 import {
   fetchArticleById,
   fetchCurrentUser,
@@ -63,8 +71,6 @@ function ArticlePageContent() {
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [isNotInterested, setIsNotInterested] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
 
   // More Like This recommendations
@@ -115,9 +121,15 @@ function ArticlePageContent() {
       try {
         const data = await fetchArticleById(articleId, token || undefined);
         setArticle(data);
-        setIsSaved(Boolean(data.is_saved));
-        setIsLiked(Boolean(data.is_liked));
-        setIsNotInterested(Boolean(data.is_not_interested));
+        if (token) {
+          setIsSaved(Boolean(data.is_saved));
+          setIsLiked(Boolean(data.is_liked));
+          setIsNotInterested(Boolean(data.is_not_interested));
+        } else {
+          setIsSaved(isLocalArticleSaved(articleId));
+          setIsLiked(isLocalArticleLiked(articleId));
+        }
+        recordLocalReading(data, 0, 0);
       } catch (err: any) {
         setError(err?.message || "Failed to load article");
       } finally {
@@ -268,19 +280,30 @@ function ArticlePageContent() {
   };
 
   const handleSaveToggle = async () => {
+    if (!article) return;
+
     if (!token) {
-      setShowAuthModal(true);
+      if (isSaved) {
+        unsaveLocalArticle(article.id);
+        setIsSaved(false);
+        showToast("Removed from your saved stories");
+      } else {
+        saveLocalArticle(article);
+        setIsSaved(true);
+        showToast("Saved to your reading list");
+      }
       return;
     }
-    if (!article) return;
 
     try {
       if (isSaved) {
         await unsaveArticle(article.id, token);
+        unsaveLocalArticle(article.id);
         setIsSaved(false);
         showToast("Removed from your saved stories");
       } else {
         await saveArticle(article.id, token);
+        saveLocalArticle(article);
         setIsSaved(true);
         showToast("Saved to your reading list");
       }
@@ -290,19 +313,24 @@ function ArticlePageContent() {
   };
 
   const handleLikeToggle = async () => {
+    if (!article) return;
+
     if (!token) {
-      setShowAuthModal(true);
+      const nowLiked = toggleLocalLikeArticle(article.id);
+      setIsLiked(nowLiked);
+      showToast(nowLiked ? "Story marked as liked" : "Like removed");
       return;
     }
-    if (!article) return;
 
     try {
       if (isLiked) {
         await unlikeArticle(article.id, token);
+        toggleLocalLikeArticle(article.id);
         setIsLiked(false);
         showToast("Like removed");
       } else {
         await likeArticle(article.id, token);
+        toggleLocalLikeArticle(article.id);
         setIsLiked(true);
         showToast("Story marked as liked");
       }
@@ -312,14 +340,18 @@ function ArticlePageContent() {
   };
 
   const handleNotInterested = async () => {
+    if (!article) return;
+
     if (!token) {
-      setShowAuthModal(true);
+      markLocalArticleDisliked(article.id);
+      setIsNotInterested(true);
+      showToast("Topic preference updated: marked as not interested");
       return;
     }
-    if (!article) return;
 
     try {
       await markArticleNotInterested(article.id, token);
+      markLocalArticleDisliked(article.id);
       setIsNotInterested(true);
       showToast("Topic preference updated: marked as not interested");
     } catch {
@@ -363,7 +395,6 @@ function ArticlePageContent() {
       <div>
         <NewspaperHeader
           user={user}
-          onOpenAuth={() => setShowAuthModal(true)}
           onOpenInterests={() => setShowInterestsModal(true)}
           onSignOut={() => {
             localStorage.removeItem("pn_auth_token");
@@ -845,17 +876,7 @@ function ArticlePageContent() {
 
       <Footer />
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(newToken, newUser) => {
-          localStorage.setItem("pn_auth_token", newToken);
-          setToken(newToken);
-          setUser(newUser);
-          setShowAuthModal(false);
-        }}
-      />
+
 
       {token && (
         <MyInterestsModal

@@ -217,13 +217,54 @@ class EditorialNewsroom:
             # Fallback 2: Generate emergency minimal fallback edition
             return await self._generate_emergency_fallback(user_id, target_date_str, next_version)
 
-    async def get_today_edition(self, user: User) -> NewspaperEditionResponse:
-        """Retrieves or creates today's edition for the given user."""
+    async def get_today_edition(self, user: Optional[User] = None) -> NewspaperEditionResponse:
+        """Retrieves or creates today's edition for the given user (or public edition if user is None)."""
         today_str = self.get_user_today_date_str(user)
-        latest = await self._get_latest_edition_model(user.id, today_str)
-        if latest and latest.status == EditionStatus.READY.value:
-            return await self._format_edition_response(latest, user)
-        return await self.generate_edition(user_id=user.id, edition_date=today_str)
+        if user is not None:
+            latest = await self._get_latest_edition_model(user.id, today_str)
+            if latest and latest.status == EditionStatus.READY.value:
+                return await self._format_edition_response(latest, user)
+            return await self.generate_edition(user_id=user.id, edition_date=today_str)
+
+        # Public / unauthenticated visitor flow
+        latest_public = await self._get_latest_edition_model(None, today_str)
+        if latest_public and latest_public.status == EditionStatus.READY.value:
+            return await self._format_edition_response(latest_public, None)
+
+        # Check for ANY ready edition overall
+        stmt = (
+            select(NewspaperEdition)
+            .options(
+                selectinload(NewspaperEdition.sections).selectinload(NewspaperSection.stories).selectinload(NewspaperStory.article).selectinload(Article.analysis),
+                selectinload(NewspaperEdition.sections).selectinload(NewspaperSection.stories).selectinload(NewspaperStory.article).selectinload(Article.topics),
+                selectinload(NewspaperEdition.sections).selectinload(NewspaperSection.stories).selectinload(NewspaperStory.article).selectinload(Article.source),
+                selectinload(NewspaperEdition.sections).selectinload(NewspaperSection.stories).selectinload(NewspaperStory.story),
+                selectinload(NewspaperEdition.stories).selectinload(NewspaperStory.article).selectinload(Article.analysis),
+                selectinload(NewspaperEdition.stories).selectinload(NewspaperStory.article).selectinload(Article.topics),
+                selectinload(NewspaperEdition.stories).selectinload(NewspaperStory.article).selectinload(Article.source),
+                selectinload(NewspaperEdition.stories).selectinload(NewspaperStory.story),
+            )
+            .where(NewspaperEdition.status == EditionStatus.READY.value)
+            .order_by(
+                NewspaperEdition.edition_date.desc(),
+                NewspaperEdition.version.desc(),
+                NewspaperEdition.generated_at.desc(),
+            )
+            .limit(1)
+        )
+        res = await self.session.execute(stmt)
+        any_edition = res.scalars().first()
+        if any_edition:
+            return await self._format_edition_response(any_edition, None)
+
+        # If no edition exists at all, find an existing user or fallback user
+        u_stmt = select(User).limit(1)
+        u_res = await self.session.execute(u_stmt)
+        first_user = u_res.scalars().first()
+        if first_user:
+            return await self.generate_edition(user_id=first_user.id, edition_date=today_str)
+
+        return await self._generate_emergency_fallback(uuid.uuid4(), today_str, 1)
 
     async def get_edition_by_date(
         self,
@@ -387,7 +428,7 @@ class EditorialNewsroom:
         )
 
     async def _get_latest_edition_model(
-        self, user_id: uuid.UUID, edition_date: str
+        self, user_id: Optional[uuid.UUID], edition_date: Optional[str] = None
     ) -> Optional[NewspaperEdition]:
         stmt = (
             select(NewspaperEdition)
@@ -401,13 +442,17 @@ class EditorialNewsroom:
                 selectinload(NewspaperEdition.stories).selectinload(NewspaperStory.article).selectinload(Article.source),
                 selectinload(NewspaperEdition.stories).selectinload(NewspaperStory.story),
             )
-            .where(
-                NewspaperEdition.user_id == user_id,
-                NewspaperEdition.edition_date == edition_date,
-            )
-            .order_by(NewspaperEdition.version.desc())
-            .limit(1)
         )
+        if user_id is not None:
+            stmt = stmt.where(NewspaperEdition.user_id == user_id)
+        if edition_date is not None:
+            stmt = stmt.where(NewspaperEdition.edition_date == edition_date)
+
+        stmt = stmt.order_by(
+            NewspaperEdition.edition_date.desc(),
+            NewspaperEdition.version.desc(),
+            NewspaperEdition.generated_at.desc(),
+        ).limit(1)
         res = await self.session.execute(stmt)
         return res.scalars().first()
 

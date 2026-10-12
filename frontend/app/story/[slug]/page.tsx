@@ -20,6 +20,14 @@ import {
   completeArticleReading,
   fetchArticleReadingState,
 } from "@/lib/api";
+import {
+  saveLocalArticle,
+  unsaveLocalArticle,
+  isLocalArticleSaved,
+  toggleLocalLikeArticle,
+  isLocalArticleLiked,
+  markLocalArticleDisliked,
+} from "@/lib/localStorageData";
 import { StoryDetail, StoryItem, ArticleDetail, User, ArticleReadingState } from "@/types";
 import {
   ArrowLeft,
@@ -211,17 +219,30 @@ export default function StoryPage() {
 
   // Actions
   const handleToggleSave = async () => {
-    if (!primaryArticle?.id || !token) {
-      showToast("Sign in to save stories");
+    if (!primaryArticle?.id) return;
+
+    if (!token) {
+      if (isSaved) {
+        unsaveLocalArticle(primaryArticle.id);
+        setIsSaved(false);
+        showToast("Removed from Saved");
+      } else {
+        saveLocalArticle(primaryArticle);
+        setIsSaved(true);
+        showToast("Saved to reading list");
+      }
       return;
     }
+
     try {
       if (isSaved) {
         await unsaveArticle(primaryArticle.id, token);
+        unsaveLocalArticle(primaryArticle.id);
         setIsSaved(false);
         showToast("Removed from Saved");
       } else {
         await saveArticle(primaryArticle.id, token);
+        saveLocalArticle(primaryArticle);
         setIsSaved(true);
         showToast("Saved");
       }
@@ -231,17 +252,24 @@ export default function StoryPage() {
   };
 
   const handleToggleLike = async () => {
-    if (!primaryArticle?.id || !token) {
-      showToast("Sign in to like stories");
+    if (!primaryArticle?.id) return;
+
+    if (!token) {
+      const nowLiked = toggleLocalLikeArticle(primaryArticle.id);
+      setIsLiked(nowLiked);
+      showToast(nowLiked ? "Liked" : "Like removed");
       return;
     }
+
     try {
       if (isLiked) {
         await unlikeArticle(primaryArticle.id, token);
+        toggleLocalLikeArticle(primaryArticle.id);
         setIsLiked(false);
         showToast("Like removed");
       } else {
         await likeArticle(primaryArticle.id, token);
+        toggleLocalLikeArticle(primaryArticle.id);
         setIsLiked(true);
         showToast("Liked");
       }
@@ -251,12 +279,18 @@ export default function StoryPage() {
   };
 
   const handleNotInterested = async () => {
-    if (!primaryArticle?.id || !token) {
-      showToast("Sign in to customize preferences");
+    if (!primaryArticle?.id) return;
+
+    if (!token) {
+      markLocalArticleDisliked(primaryArticle.id);
+      setIsNotInterested(true);
+      showToast("Got it — we'll show fewer stories like this");
       return;
     }
+
     try {
       await markArticleNotInterested(primaryArticle.id, token);
+      markLocalArticleDisliked(primaryArticle.id);
       setIsNotInterested(true);
       showToast("Got it — we'll show fewer stories like this");
     } catch {

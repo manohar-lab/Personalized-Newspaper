@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.models.user import User
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.schemas.interest import (
     UserInterestItem,
     UserInterestResponse,
@@ -38,10 +38,19 @@ def format_interest_response(interest) -> UserInterestResponse:
 
 @router.get("/dynamic-profile", response_model=DynamicProfileResponse)
 async def get_dynamic_profile(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Phase 13: Retrieve user's dynamic interest intelligence profile (explicit, strong, emerging, avoided, etc.)."""
+    if not current_user:
+        return DynamicProfileResponse(
+            explicit_interests=[],
+            strong_interests=[],
+            emerging_interests=[],
+            avoided_interests=[],
+            total_interests=0,
+            total_signals_processed=0,
+        )
     learner = InterestLearningService(db)
     return await learner.get_dynamic_profile(current_user.id)
 

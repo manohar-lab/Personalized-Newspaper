@@ -23,8 +23,8 @@ export default function RegisterPage() {
       localStorage.setItem("pn_auth_token", resp.access_token);
       localStorage.setItem("auth_token", resp.access_token);
       localStorage.setItem("token", resp.access_token);
-      // Route to onboarding so they can select their interests
-      router.push("/onboarding");
+      // Route directly to newspaper homepage
+      router.push("/newspaper");
     } catch (err: any) {
       setError(err?.message || "Registration failed. Please try again.");
     } finally {

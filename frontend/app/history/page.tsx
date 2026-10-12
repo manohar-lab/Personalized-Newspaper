@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
-import { AuthModal } from "@/components/AuthModal";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
 import {
@@ -11,11 +10,12 @@ import {
   fetchMyReadingHistory,
   fetchMyContinueReading,
   clearMyReadingHistory,
-  likeArticle,
-  unlikeArticle,
-  saveArticle,
-  unsaveArticle,
 } from "@/lib/api";
+import {
+  getLocalReadingHistory,
+  clearLocalReadingHistory,
+  getLocalContinueReading,
+} from "@/lib/localStorageData";
 import {
   User,
   ReadingHistoryItem,
@@ -26,13 +26,10 @@ import {
   Clock,
   BookOpen,
   ArrowRight,
-  Bookmark,
-  Heart,
   Trash2,
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  Check,
   TrendingUp,
   History,
   CheckCircle2,
@@ -50,7 +47,6 @@ export default function ReadingHistoryPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
 
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState<boolean>(false);
@@ -60,6 +56,38 @@ export default function ReadingHistoryPage() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const loadLocalData = () => {
+    setLoading(true);
+    const allHistory = getLocalReadingHistory();
+    const allContinue = getLocalContinueReading(8);
+    setContinueItems(allContinue);
+    setTotalCount(allHistory.length);
+    const pageSize = 15;
+    setTotalPages(Math.max(1, Math.ceil(allHistory.length / pageSize)));
+    const start = (page - 1) * pageSize;
+    setHistoryItems(allHistory.slice(start, start + pageSize));
+    setLoading(false);
+  };
+
+  const loadData = async (authToken: string) => {
+    setLoading(true);
+    try {
+      const [histRes, contRes] = await Promise.all([
+        fetchMyReadingHistory(authToken, page, 15),
+        fetchMyContinueReading(authToken, 8),
+      ]);
+      setHistoryItems(histRes.items);
+      setTotalPages(histRes.total_pages);
+      setTotalCount(histRes.total);
+      setContinueItems(contRes.items);
+    } catch (err: any) {
+      console.warn("Falling back to local reading history:", err);
+      loadLocalData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const savedToken = localStorage.getItem("pn_auth_token");
     if (savedToken) {
@@ -67,51 +95,33 @@ export default function ReadingHistoryPage() {
       fetchCurrentUser(savedToken)
         .then(setUser)
         .catch(() => {});
+      loadData(savedToken);
     } else {
-      setLoading(false);
+      loadLocalData();
     }
-  }, []);
-
-  const loadData = async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const [histRes, contRes] = await Promise.all([
-        fetchMyReadingHistory(token, page, 15),
-        fetchMyContinueReading(token, 8),
-      ]);
-      setHistoryItems(histRes.items);
-      setTotalPages(histRes.total_pages);
-      setTotalCount(histRes.total);
-      setContinueItems(contRes.items);
-    } catch (err: any) {
-      console.error("Failed to load reading history:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (token) {
-      loadData();
-    }
-  }, [token, page]);
+  }, [page]);
 
   const handleClearHistory = async () => {
-    if (!token) return;
-    if (!window.confirm("Are you sure you want to clear your entire reading history?")) {
+    if (!window.confirm("Are you sure you want to clear your reading history?")) {
       return;
     }
 
     setIsClearing(true);
     try {
-      await clearMyReadingHistory(token);
+      if (token) {
+        await clearMyReadingHistory(token);
+      }
+      clearLocalReadingHistory();
       setHistoryItems([]);
       setContinueItems([]);
       setTotalCount(0);
       showToast("Reading history cleared successfully");
-    } catch (err) {
-      showToast("Failed to clear reading history");
+    } catch {
+      clearLocalReadingHistory();
+      setHistoryItems([]);
+      setContinueItems([]);
+      setTotalCount(0);
+      showToast("Reading history cleared locally");
     } finally {
       setIsClearing(false);
     }
@@ -130,101 +140,98 @@ export default function ReadingHistoryPage() {
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-300">
             <TrendingUp className="w-3 h-3 text-blue-600" />
-            High Read
+            High Focus
           </span>
         );
       case "MEDIUM":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+            <Clock className="w-3 h-3 text-amber-600" />
             Engaged
           </span>
         );
-      case "LOW":
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-300">
-            Glanced
-          </span>
-        );
-      case "BOUNCED":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
-            Bounced
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-stone-100 text-stone-700 border border-stone-300">
+            Glance
           </span>
         );
     }
   };
 
-  // Group history items by date
-  const groupHistoryByDate = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-
-    const groups: { label: string; items: ReadingHistoryItem[] }[] = [
-      { label: "TODAY", items: [] },
-      { label: "YESTERDAY", items: [] },
-      { label: "EARLIER", items: [] },
-    ];
+  // Group items by date
+  const groupedHistory = React.useMemo(() => {
+    const groups: { label: string; items: ReadingHistoryItem[] }[] = [];
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
 
     historyItems.forEach((item) => {
-      const itemDate = new Date(item.last_read_at).toISOString().split("T")[0];
-      if (itemDate === today) {
-        groups[0].items.push(item);
-      } else if (itemDate === yesterday) {
-        groups[1].items.push(item);
+      const itemDate = new Date(item.last_read_at).toDateString();
+      let label = "Older";
+      if (itemDate === today) label = "Today";
+      else if (itemDate === yesterday) label = "Yesterday";
+      else {
+        label = new Date(item.last_read_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      }
+
+      const existing = groups.find((g) => g.label === label);
+      if (existing) {
+        existing.items.push(item);
       } else {
-        groups[2].items.push(item);
+        groups.push({ label, items: [item] });
       }
     });
 
-    return groups.filter((g) => g.items.length > 0);
-  };
-
-  const groupedHistory = groupHistoryByDate();
+    return groups;
+  }, [historyItems]);
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#FAF8F5] text-[#181615]">
       <div>
         <NewspaperHeader
           user={user}
-          onOpenAuth={() => setShowAuthModal(true)}
           onOpenInterests={() => setShowInterestsModal(true)}
           onSignOut={() => {
             localStorage.removeItem("pn_auth_token");
             setToken(null);
             setUser(null);
+            loadLocalData();
           }}
         />
 
-        {/* Toast */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#181615] text-[#FAF8F5] px-5 py-3 rounded-sm shadow-xl font-sans text-xs flex items-center gap-2 border border-[#4A453E] animate-bounce">
-            <Check className="w-4 h-4 text-emerald-400" />
-            <span>{toastMessage}</span>
+          <div className="fixed bottom-6 right-6 z-50 bg-[#181615] text-white px-4 py-2.5 text-xs font-mono rounded shadow-lg border border-[#7A7268] animate-bounce">
+            {toastMessage}
           </div>
         )}
 
-        <main className="max-w-5xl mx-auto px-4 sm:px-8 py-10 font-sans">
-          {/* Header Section */}
-          <div className="border-b-2 border-[#181615] pb-6 mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <main className="max-w-5xl mx-auto px-4 sm:px-8 py-8 font-sans">
+          {/* Header Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b-2 border-[#181615] gap-4">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#8C2524] mb-1">
-                <History className="w-4 h-4" />
-                <span>Reading Ledger</span>
+              <div className="flex items-center gap-2 mb-1">
+                <History className="w-5 h-5 text-[#8C2524]" />
+                <span className="text-xs font-mono uppercase tracking-widest text-[#7A7268]">
+                  Reading Chronology & Engagement
+                </span>
               </div>
-              <h1 className="font-editorial-heading font-black text-4xl sm:text-5xl text-[#181615] tracking-tight">
+              <h1 className="font-editorial-heading font-black text-3xl sm:text-4xl text-[#181615]">
                 Reading History
               </h1>
-              <p className="font-editorial-body italic text-base sm:text-lg text-[#5C554E] mt-1">
-                Track your active reading habits, completion progress, and content engagement.
+              <p className="font-editorial-body text-sm text-[#6C645C] mt-1">
+                Stories and deep-reads you have explored across your personalized editions.
               </p>
             </div>
 
-            {token && historyItems.length > 0 && (
+            {totalCount > 0 && (
               <button
                 onClick={handleClearHistory}
                 disabled={isClearing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-sm transition-colors self-start sm:self-auto"
+                className="self-start sm:self-center px-3.5 py-1.5 border border-[#DCD3C7] bg-white hover:bg-rose-50 text-rose-800 text-xs font-semibold rounded-sm transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{isClearing ? "Clearing..." : "Clear History"}</span>
@@ -232,24 +239,7 @@ export default function ReadingHistoryPage() {
             )}
           </div>
 
-          {!token ? (
-            /* Unauthorized Prompt */
-            <div className="p-12 text-center bg-white border border-[#DCD3C7] rounded-sm my-12 shadow-sm">
-              <BookOpen className="w-12 h-12 text-[#8C2524] mx-auto mb-4 stroke-1" />
-              <h2 className="font-editorial-heading font-bold text-2xl text-[#181615] mb-2">
-                Sign In to View Reading History
-              </h2>
-              <p className="font-editorial-body text-base text-[#6C645C] max-w-md mx-auto mb-6">
-                Your reading history, scroll progress, and personalized engagement analytics are securely saved to your account.
-              </p>
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="px-6 py-2.5 bg-[#181615] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#8C2524] transition-colors rounded-sm"
-              >
-                Sign In / Register
-              </button>
-            </div>
-          ) : loading ? (
+          {loading ? (
             /* Loading Skeleton */
             <div className="space-y-8 animate-pulse py-4">
               <div className="h-40 bg-[#E8E1D5]/60 rounded-sm" />
@@ -403,14 +393,14 @@ export default function ReadingHistoryPage() {
                                   Read {Math.round(item.last_completion_percentage || item.max_scroll_percentage)}%
                                 </span>
                                 <div className="w-24 h-1.5 bg-[#E5DDD0] rounded-full overflow-hidden mt-1">
-                                  <div
-                                    className="h-full bg-[#8C2524]"
-                                    style={{
-                                      width: `${Math.round(
-                                        item.last_completion_percentage || item.max_scroll_percentage
-                                      )}%`,
-                                    }}
-                                  />
+                                <div
+                                  className="h-full bg-[#8C2524]"
+                                  style={{
+                                    width: `${Math.round(
+                                      item.last_completion_percentage || item.max_scroll_percentage
+                                    )}%`,
+                                  }}
+                                />
                                 </div>
                               </div>
                               <span className="text-[11px] font-mono text-[#7A7268] mt-1">
@@ -455,18 +445,6 @@ export default function ReadingHistoryPage() {
       </div>
 
       <Footer />
-
-      {/* Auth & Preferences Modals */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(newToken, newUser) => {
-          localStorage.setItem("pn_auth_token", newToken);
-          setToken(newToken);
-          setUser(newUser);
-          setShowAuthModal(false);
-        }}
-      />
 
       {token && (
         <MyInterestsModal

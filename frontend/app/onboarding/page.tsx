@@ -17,7 +17,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     const savedToken = localStorage.getItem("pn_auth_token");
     if (!savedToken) {
-      router.push("/login");
+      router.push("/newspaper");
       return;
     }
     setToken(savedToken);
@@ -28,7 +28,7 @@ export default function OnboardingPage() {
       })
       .catch(() => {
         localStorage.removeItem("pn_auth_token");
-        router.push("/login");
+        router.push("/newspaper");
       });
   }, [router]);
 

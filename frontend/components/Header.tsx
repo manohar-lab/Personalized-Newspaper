@@ -103,14 +103,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ShieldCheck className="h-3.5 w-3.5 text-red-700" /> Sources Directory
           </Link>
-          <button
-            type="button"
-            onClick={user ? onOpenOnboarding : onOpenAuth}
-            className="hover:text-red-700 transition-colors flex items-center gap-1.5 text-gray-700 font-bold uppercase shrink-0"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-amber-600" /> Onboarding Setup
-          </button>
-
           {user && (
             <button
               type="button"
@@ -145,13 +137,9 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={onOpenAuth}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#121212] text-white rounded hover:bg-gray-800 transition-colors text-xs font-sans font-medium uppercase tracking-wider"
-            >
-              <UserIcon className="h-3.5 w-3.5" /> Sign In / Register
-            </button>
+            <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-gray-500">
+              Open Access
+            </span>
           )}
         </div>
       </nav>

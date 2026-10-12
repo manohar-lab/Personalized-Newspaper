@@ -6,7 +6,6 @@ import { EditionStoryCard } from "@/components/EditionStoryCard";
 import { EditionSection } from "@/components/EditionSection";
 import { NewspaperSkeleton } from "@/components/NewspaperSkeleton";
 import { EmptyNewspaperState } from "@/components/EmptyNewspaperState";
-import { AuthModal } from "@/components/AuthModal";
 import { Onboarding } from "@/components/Onboarding";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
@@ -39,7 +38,6 @@ export default function NewspaperPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Modals state
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
 
@@ -50,27 +48,34 @@ export default function NewspaperPage() {
       localStorage.getItem("token");
     if (savedToken) {
       setToken(savedToken);
-      loadUserAndEdition(savedToken);
-    } else {
-      setLoading(false);
-      setShowAuthModal(true);
     }
+    loadUserAndEdition(savedToken || undefined);
   }, []);
 
-  const loadUserAndEdition = async (authToken: string) => {
+  const loadUserAndEdition = async (authToken?: string) => {
     setLoading(true);
     setBriefingLoading(true);
     setError(null);
     try {
-      const u = await fetchCurrentUser(authToken);
-      setUser(u);
+      if (authToken) {
+        try {
+          const u = await fetchCurrentUser(authToken);
+          setUser(u);
+        } catch {
+          localStorage.removeItem("pn_auth_token");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("token");
+          setToken(null);
+          setUser(null);
+        }
 
-      // Start news session
-      try {
-        const sess = await startNewsSession(authToken);
-        setSessionId(sess.session_id);
-      } catch (sessErr) {
-        console.warn("Could not start session:", sessErr);
+        // Start news session
+        try {
+          const sess = await startNewsSession(authToken);
+          setSessionId(sess.session_id);
+        } catch (sessErr) {
+          console.warn("Could not start session:", sessErr);
+        }
       }
 
       // Fetch edition and briefing in parallel
@@ -90,16 +95,7 @@ export default function NewspaperPage() {
       }
     } catch (err: any) {
       console.warn("Error fetching newspaper edition:", err);
-      if (err?.message?.includes("credentials") || err?.message?.includes("401")) {
-        localStorage.removeItem("pn_auth_token");
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
-        setShowAuthModal(true);
-      } else {
-        setError(err?.message || "Failed to load newspaper edition");
-      }
+      setError(err?.message || "Failed to load newspaper edition");
     } finally {
       setLoading(false);
       setBriefingLoading(false);
@@ -132,24 +128,13 @@ export default function NewspaperPage() {
     }
   };
 
-  const handleAuthSuccess = (newToken: string, newUser: User) => {
-    localStorage.setItem("pn_auth_token", newToken);
-    localStorage.setItem("auth_token", newToken);
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
-    setUser(newUser);
-    setShowAuthModal(false);
-    loadUserAndEdition(newToken);
-  };
-
   const handleSignOut = () => {
     localStorage.removeItem("pn_auth_token");
     localStorage.removeItem("auth_token");
     localStorage.removeItem("token");
     setToken(null);
     setUser(null);
-    setEdition(null);
-    setShowAuthModal(true);
+    loadUserAndEdition(undefined);
   };
 
   const handleOnboardingComplete = () => {
@@ -231,10 +216,8 @@ export default function NewspaperPage() {
       <div>
         <NewspaperHeader
           user={user}
-          onOpenAuth={() => setShowAuthModal(true)}
           onOpenInterests={() => {
-            if (!token) setShowAuthModal(true);
-            else setShowInterestsModal(true);
+            if (token) setShowInterestsModal(true);
           }}
           onSignOut={handleSignOut}
           searchQuery={searchQuery}
@@ -302,12 +285,12 @@ export default function NewspaperPage() {
             <EmptyNewspaperState
               type="error"
               errorMessage={error}
-              onRetry={() => (token ? loadUserAndEdition(token) : setShowAuthModal(true))}
+              onRetry={() => loadUserAndEdition(token || undefined)}
             />
           ) : !edition?.lead_story && (!edition?.sections || edition.sections.length === 0) ? (
             <EmptyNewspaperState
               type="no_articles"
-              onRetry={() => (token ? loadUserAndEdition(token) : setShowAuthModal(true))}
+              onRetry={() => loadUserAndEdition(token || undefined)}
             />
           ) : (
             <>
@@ -440,11 +423,6 @@ export default function NewspaperPage() {
       <Footer />
 
       {/* Modals */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={handleAuthSuccess}
-      />
 
       {token && (
         <MyInterestsModal

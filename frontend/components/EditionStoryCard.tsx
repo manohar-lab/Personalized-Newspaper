@@ -17,6 +17,14 @@ import {
   Info,
 } from "lucide-react";
 import { saveArticle, unsaveArticle, likeArticle, unlikeArticle, markArticleNotInterested } from "@/lib/api";
+import {
+  saveLocalArticle,
+  unsaveLocalArticle,
+  isLocalArticleSaved,
+  toggleLocalLikeArticle,
+  isLocalArticleLiked,
+  markLocalArticleDisliked,
+} from "@/lib/localStorageData";
 
 interface EditionStoryCardProps {
   story: NewspaperStoryResponse;
@@ -37,6 +45,13 @@ export function EditionStoryCard({
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
   const [showWhyReason, setShowWhyReason] = useState<boolean>(false);
 
+  React.useEffect(() => {
+    if (!token) {
+      if (isLocalArticleSaved(story.article_id)) setIsSaved(true);
+      if (isLocalArticleLiked(story.article_id)) setIsLiked(true);
+    }
+  }, [token, story.article_id]);
+
   const showFeedback = (msg: string) => {
     setFeedbackMsg(msg);
     setTimeout(() => setFeedbackMsg(null), 2500);
@@ -45,13 +60,39 @@ export function EditionStoryCard({
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!token) {
-      showFeedback("Sign in to save stories");
+      if (isSaved) {
+        unsaveLocalArticle(story.article_id);
+        setIsSaved(false);
+        showFeedback("Removed bookmark");
+        onActionComplete?.("UNSAVE", story.article_id);
+      } else {
+        saveLocalArticle({
+          id: story.article_id,
+          title: story.title,
+          slug: story.story_slug || story.article_id,
+          description: story.summary,
+          published_at: story.published_at || new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          reading_time_minutes: story.reading_time_minutes || 3,
+          status: "PUBLISHED",
+          language: "en",
+          is_full_text_available: true,
+          topics: story.topics ? story.topics.map((t) => ({ id: t, name: t, slug: t, category: "GENERAL" })) : [],
+          source_name: story.source_name,
+        });
+        setIsSaved(true);
+        showFeedback("Saved to reading list");
+        onActionComplete?.("SAVE", story.article_id);
+      }
       return;
     }
+
     try {
       if (isSaved) {
         await unsaveArticle(story.article_id, token);
+        unsaveLocalArticle(story.article_id);
         setIsSaved(false);
         showFeedback("Removed bookmark");
         onActionComplete?.("UNSAVE", story.article_id);
@@ -69,18 +110,25 @@ export function EditionStoryCard({
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!token) {
-      showFeedback("Sign in to like stories");
+      const nowLiked = toggleLocalLikeArticle(story.article_id);
+      setIsLiked(nowLiked);
+      showFeedback(nowLiked ? "Story liked" : "Like removed");
+      onActionComplete?.(nowLiked ? "LIKE" : "UNLIKE", story.article_id);
       return;
     }
+
     try {
       if (isLiked) {
         await unlikeArticle(story.article_id, token);
+        toggleLocalLikeArticle(story.article_id);
         setIsLiked(false);
         showFeedback("Like removed");
         onActionComplete?.("UNLIKE", story.article_id);
       } else {
         await likeArticle(story.article_id, token);
+        toggleLocalLikeArticle(story.article_id);
         setIsLiked(true);
         showFeedback("Story liked");
         onActionComplete?.("LIKE", story.article_id);
@@ -93,12 +141,18 @@ export function EditionStoryCard({
   const handleNotInterested = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!token) {
-      showFeedback("Sign in to personalize");
+      markLocalArticleDisliked(story.article_id);
+      setIsDismissed(true);
+      showFeedback("Dismissed");
+      onActionComplete?.("NOT_INTERESTED", story.article_id);
       return;
     }
+
     try {
       await markArticleNotInterested(story.article_id, token);
+      markLocalArticleDisliked(story.article_id);
       setIsDismissed(true);
       showFeedback("Dismissed");
       onActionComplete?.("NOT_INTERESTED", story.article_id);

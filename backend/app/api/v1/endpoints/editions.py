@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database.session import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.models.user import User
 from app.models.article import Article
 from app.newspaper.models import NewspaperEdition, NewspaperStory
@@ -20,30 +20,26 @@ router = APIRouter()
 
 @router.get("/latest", response_model=NewspaperEditionResponse, summary="Get latest published edition snapshot")
 async def get_latest_edition(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve the latest immutable edition snapshot for the authenticated user."""
-    stmt = (
-        select(NewspaperEdition)
-        .where(
-            NewspaperEdition.user_id == current_user.id,
-            NewspaperEdition.status == "READY",
-        )
-        .order_by(
-            desc(NewspaperEdition.edition_date),
-            desc(NewspaperEdition.version),
-            desc(NewspaperEdition.generated_at),
-        )
-        .limit(1)
-    )
+    """Retrieve the latest immutable edition snapshot for user or public fallback."""
+    stmt = select(NewspaperEdition).where(NewspaperEdition.status == "READY")
+    if current_user:
+        stmt = stmt.where(NewspaperEdition.user_id == current_user.id)
+    stmt = stmt.order_by(
+        desc(NewspaperEdition.edition_date),
+        desc(NewspaperEdition.version),
+        desc(NewspaperEdition.generated_at),
+    ).limit(1)
+
     res = await db.execute(stmt)
     latest = res.scalar_one_or_none()
 
     service = NewspaperService(db)
     if latest:
         return await service.get_edition_by_date(
-            current_user.id, latest.edition_date, version=latest.version
+            latest.user_id, latest.edition_date, version=latest.version
         )
 
     # If no stored edition exists yet, generate on the fly

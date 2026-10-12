@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { AuthModal } from "@/components/AuthModal";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Onboarding } from "@/components/Onboarding";
 import {
@@ -120,7 +119,6 @@ export default function SearchPage() {
   // User & Modals
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [interestsModalOpen, setInterestsModalOpen] = useState(false);
 
@@ -289,11 +287,6 @@ export default function SearchPage() {
   };
 
   const handleToggleTopicFollow = async (topic: SearchTopicItem) => {
-    if (!token) {
-      setAuthModalOpen(true);
-      return;
-    }
-
     const isCurrentlyFollowed = followedTopicIds.has(topic.id);
     const updated = new Set(followedTopicIds);
     if (isCurrentlyFollowed) {
@@ -302,6 +295,8 @@ export default function SearchPage() {
       updated.add(topic.id);
     }
     setFollowedTopicIds(updated);
+
+    if (!token) return;
 
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -347,7 +342,7 @@ export default function SearchPage() {
     <div className="min-h-screen bg-[#FDFBF7] text-[#121212] flex flex-col font-serif selection:bg-amber-100">
       <Header
         user={user}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => {}}
         onOpenOnboarding={() => setOnboardingOpen(true)}
         onOpenInterests={() => setInterestsModalOpen(true)}
         onSignOut={() => {
@@ -1202,18 +1197,7 @@ export default function SearchPage() {
 
       <Footer />
 
-      {/* Auth & Preferences Modals */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onAuthSuccess={(newToken, newUser) => {
-          setAuthModalOpen(false);
-          setToken(newToken);
-          setUser(newUser);
-          localStorage.setItem("auth_token", newToken);
-          loadSearchHistory(newToken);
-        }}
-      />
+      {/* Preferences Modals */}
       {onboardingOpen && token && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 font-sans">
           <div className="bg-white max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto rounded shadow-2xl relative">

@@ -149,11 +149,15 @@ export async function removeInterest(
 
 // Personalized Newspaper API (Phase 9 Persistent Editions)
 export async function fetchTodayEdition(
-  token: string
+  token?: string
 ): Promise<NewspaperEditionResponse> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
   return request<NewspaperEditionResponse>("/api/newspaper/today", {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
   });
 }
 
@@ -616,11 +620,11 @@ import {
 } from "@/types";
 
 export async function fetchDynamicInterestProfile(
-  token: string
+  token?: string
 ): Promise<DynamicProfileResponse> {
   return request<DynamicProfileResponse>("/api/interests/dynamic-profile", {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 }
 
@@ -999,12 +1003,20 @@ export async function searchStories(
 // ==========================================
 
 export async function fetchTodayBriefing(
-  token: string
-): Promise<import("@/types").NewsBriefingResponse> {
-  return request<import("@/types").NewsBriefingResponse>("/api/briefings/today", {
-    method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  token?: string
+): Promise<import("@/types").NewsBriefingResponse | null> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  try {
+    return await request<import("@/types").NewsBriefingResponse>("/api/briefings/today", {
+      method: "GET",
+      headers,
+    });
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchBriefingHistory(

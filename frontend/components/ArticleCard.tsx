@@ -6,6 +6,14 @@ import { Article } from "@/types";
 import { ArticleMetadata } from "./ArticleMetadata";
 import { Bookmark, Heart, ThumbsDown, ArrowUpRight, Check } from "lucide-react";
 import { saveArticle, unsaveArticle, likeArticle, unlikeArticle, markArticleNotInterested } from "@/lib/api";
+import {
+  saveLocalArticle,
+  unsaveLocalArticle,
+  isLocalArticleSaved,
+  toggleLocalLikeArticle,
+  isLocalArticleLiked,
+  markLocalArticleDisliked,
+} from "@/lib/localStorageData";
 
 interface ArticleCardProps {
   article: Article;
@@ -25,6 +33,13 @@ export function ArticleCard({
   const [isNotInterested, setIsNotInterested] = useState<boolean>(Boolean(article.is_not_interested));
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!token) {
+      if (isLocalArticleSaved(article.id)) setIsSaved(true);
+      if (isLocalArticleLiked(article.id)) setIsLiked(true);
+    }
+  }, [token, article.id]);
+
   const showFeedback = (msg: string) => {
     setFeedbackMsg(msg);
     setTimeout(() => setFeedbackMsg(null), 2500);
@@ -33,18 +48,32 @@ export function ArticleCard({
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!token) {
-      showFeedback("Sign in to save stories");
+      if (isSaved) {
+        unsaveLocalArticle(article.id);
+        setIsSaved(false);
+        showFeedback("Removed from saved");
+        onActionComplete?.("UNSAVE", article.id);
+      } else {
+        saveLocalArticle(article);
+        setIsSaved(true);
+        showFeedback("Saved to reading list");
+        onActionComplete?.("SAVE", article.id);
+      }
       return;
     }
+
     try {
       if (isSaved) {
         await unsaveArticle(article.id, token);
+        unsaveLocalArticle(article.id);
         setIsSaved(false);
         showFeedback("Removed from saved");
         onActionComplete?.("UNSAVE", article.id);
       } else {
         await saveArticle(article.id, token);
+        saveLocalArticle(article);
         setIsSaved(true);
         showFeedback("Saved to reading list");
         onActionComplete?.("SAVE", article.id);
@@ -57,18 +86,25 @@ export function ArticleCard({
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!token) {
-      showFeedback("Sign in to like stories");
+      const nowLiked = toggleLocalLikeArticle(article.id);
+      setIsLiked(nowLiked);
+      showFeedback(nowLiked ? "Story liked" : "Like removed");
+      onActionComplete?.(nowLiked ? "LIKE" : "UNLIKE", article.id);
       return;
     }
+
     try {
       if (isLiked) {
         await unlikeArticle(article.id, token);
+        toggleLocalLikeArticle(article.id);
         setIsLiked(false);
         showFeedback("Like removed");
         onActionComplete?.("UNLIKE", article.id);
       } else {
         await likeArticle(article.id, token);
+        toggleLocalLikeArticle(article.id);
         setIsLiked(true);
         showFeedback("Story liked");
         onActionComplete?.("LIKE", article.id);
@@ -81,12 +117,18 @@ export function ArticleCard({
   const handleNotInterested = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     if (!token) {
-      showFeedback("Sign in to personalize");
+      markLocalArticleDisliked(article.id);
+      setIsNotInterested(true);
+      showFeedback("Marked not interested");
+      onActionComplete?.("NOT_INTERESTED", article.id);
       return;
     }
+
     try {
       await markArticleNotInterested(article.id, token);
+      markLocalArticleDisliked(article.id);
       setIsNotInterested(true);
       showFeedback("Marked not interested");
       onActionComplete?.("NOT_INTERESTED", article.id);

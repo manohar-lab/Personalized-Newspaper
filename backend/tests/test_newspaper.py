@@ -9,9 +9,9 @@ async def test_newspaper_personalization_flow():
     password = "SecurePassword123!"
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # 1. Unauthorized check
+        # 1. Public unauthenticated access check
         unauth_resp = await client.get("/api/newspaper")
-        assert unauth_resp.status_code == 401
+        assert unauth_resp.status_code == 200
 
         # 2. Register new user without interests yet
         reg_resp = await client.post("/api/auth/register", json={

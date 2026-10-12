@@ -19,8 +19,8 @@ class NewspaperService:
         self.session = session
         self.newsroom = EditorialNewsroom(session)
 
-    async def get_personalized_newspaper(self, user: User) -> NewspaperEditionResponse:
-        """Fetch today's personalized newspaper edition for user."""
+    async def get_personalized_newspaper(self, user: Optional[User] = None) -> NewspaperEditionResponse:
+        """Fetch today's newspaper edition for user or public fallback."""
         return await self.newsroom.get_today_edition(user)
 
     async def get_edition_by_date(

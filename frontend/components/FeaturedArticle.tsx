@@ -6,6 +6,13 @@ import { Article } from "@/types";
 import { ArticleMetadata } from "./ArticleMetadata";
 import { Bookmark, Heart, ArrowRight, Sparkles } from "lucide-react";
 import { saveArticle, unsaveArticle, likeArticle, unlikeArticle } from "@/lib/api";
+import {
+  saveLocalArticle,
+  unsaveLocalArticle,
+  isLocalArticleSaved,
+  toggleLocalLikeArticle,
+  isLocalArticleLiked,
+} from "@/lib/localStorageData";
 
 interface FeaturedArticleProps {
   article: Article;
@@ -22,6 +29,13 @@ export function FeaturedArticle({
   const [isLiked, setIsLiked] = useState<boolean>(Boolean(article.is_liked));
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!token) {
+      if (isLocalArticleSaved(article.id)) setIsSaved(true);
+      if (isLocalArticleLiked(article.id)) setIsLiked(true);
+    }
+  }, [token, article.id]);
+
   const showToast = (msg: string) => {
     setFeedback(msg);
     setTimeout(() => setFeedback(null), 2500);
@@ -29,18 +43,32 @@ export function FeaturedArticle({
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
+
     if (!token) {
-      showToast("Sign in to save stories");
+      if (isSaved) {
+        unsaveLocalArticle(article.id);
+        setIsSaved(false);
+        showToast("Removed from saved stories");
+        onActionComplete?.("UNSAVE", article.id);
+      } else {
+        saveLocalArticle(article);
+        setIsSaved(true);
+        showToast("Saved to reading list");
+        onActionComplete?.("SAVE", article.id);
+      }
       return;
     }
+
     try {
       if (isSaved) {
         await unsaveArticle(article.id, token);
+        unsaveLocalArticle(article.id);
         setIsSaved(false);
         showToast("Removed from saved stories");
         onActionComplete?.("UNSAVE", article.id);
       } else {
         await saveArticle(article.id, token);
+        saveLocalArticle(article);
         setIsSaved(true);
         showToast("Saved to reading list");
         onActionComplete?.("SAVE", article.id);
@@ -52,18 +80,25 @@ export function FeaturedArticle({
 
   const handleLikeToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
+
     if (!token) {
-      showToast("Sign in to like stories");
+      const nowLiked = toggleLocalLikeArticle(article.id);
+      setIsLiked(nowLiked);
+      showToast(nowLiked ? "Story liked" : "Like removed");
+      onActionComplete?.(nowLiked ? "LIKE" : "UNLIKE", article.id);
       return;
     }
+
     try {
       if (isLiked) {
         await unlikeArticle(article.id, token);
+        toggleLocalLikeArticle(article.id);
         setIsLiked(false);
         showToast("Like removed");
         onActionComplete?.("UNLIKE", article.id);
       } else {
         await likeArticle(article.id, token);
+        toggleLocalLikeArticle(article.id);
         setIsLiked(true);
         showToast("Story liked");
         onActionComplete?.("LIKE", article.id);

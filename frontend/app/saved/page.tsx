@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
-import { ArticleCard } from "@/components/ArticleCard";
-import { AuthModal } from "@/components/AuthModal";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
 import {
@@ -12,6 +10,10 @@ import {
   fetchSavedArticles,
   unsaveArticle,
 } from "@/lib/api";
+import {
+  getLocalSavedArticles,
+  unsaveLocalArticle,
+} from "@/lib/localStorageData";
 import { SavedArticleItem, User } from "@/types";
 import { Bookmark, ArrowLeft, Trash2, ArrowRight } from "lucide-react";
 
@@ -21,7 +23,6 @@ export default function SavedArticlesPage() {
   const [savedItems, setSavedItems] = useState<SavedArticleItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
 
   useEffect(() => {
@@ -33,6 +34,9 @@ export default function SavedArticlesPage() {
         .catch(() => {});
       loadSaved(savedToken);
     } else {
+      const local = getLocalSavedArticles();
+      setSavedItems(local);
+      setTotal(local.length);
       setLoading(false);
     }
   }, []);
@@ -44,19 +48,27 @@ export default function SavedArticlesPage() {
       setSavedItems(resp.items);
       setTotal(resp.total);
     } catch {
-      setSavedItems([]);
-      setTotal(0);
+      // Fallback to local storage if API fails or user is unauthenticated
+      const local = getLocalSavedArticles();
+      setSavedItems(local);
+      setTotal(local.length);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemove = async (articleId: string) => {
-    if (!token) return;
+    if (!token) {
+      const updated = unsaveLocalArticle(articleId);
+      setSavedItems(updated);
+      setTotal(updated.length);
+      return;
+    }
     try {
       await unsaveArticle(articleId, token);
       setSavedItems((prev) => prev.filter((item) => item.article.id !== articleId));
       setTotal((prev) => Math.max(0, prev - 1));
+      unsaveLocalArticle(articleId);
     } catch (err) {
       console.error("Failed to remove saved article", err);
     }
@@ -67,14 +79,14 @@ export default function SavedArticlesPage() {
       <div>
         <NewspaperHeader
           user={user}
-          onOpenAuth={() => setShowAuthModal(true)}
           onOpenInterests={() => setShowInterestsModal(true)}
           onSignOut={() => {
             localStorage.removeItem("pn_auth_token");
             setToken(null);
             setUser(null);
-            setSavedItems([]);
-            setTotal(0);
+            const local = getLocalSavedArticles();
+            setSavedItems(local);
+            setTotal(local.length);
           }}
         />
 
@@ -99,21 +111,7 @@ export default function SavedArticlesPage() {
             </span>
           </div>
 
-          {!token ? (
-            <div className="p-8 sm:p-12 text-center bg-white border border-[#DCD3C7] my-8 font-sans">
-              <Bookmark className="w-12 h-12 text-[#8C2524] mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-[#181615] mb-2">Sign in to view saved stories</h2>
-              <p className="text-sm text-[#7A7268] mb-6">
-                Your saved articles are synced to your account so you can read them at your convenience.
-              </p>
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="px-6 py-2.5 bg-[#181615] text-[#FAF8F5] text-xs font-bold uppercase tracking-wider hover:bg-[#8C2524] transition-colors"
-              >
-                Sign In / Register
-              </button>
-            </div>
-          ) : loading ? (
+          {loading ? (
             <div className="space-y-4 animate-pulse">
               {[1, 2, 3].map((n) => (
                 <div key={n} className="h-32 bg-[#E5DDD0] rounded-sm" />
@@ -124,13 +122,13 @@ export default function SavedArticlesPage() {
               <Bookmark className="w-12 h-12 text-[#DCD3C7] mx-auto mb-4" />
               <h2 className="text-xl font-bold text-[#181615] mb-2">Your reading list is empty</h2>
               <p className="text-sm text-[#7A7268] mb-6">
-                Bookmark articles while browsing your personalized newspaper to read them later.
+                Bookmark articles while browsing the newspaper to read them later at your convenience.
               </p>
               <Link
                 href="/newspaper"
                 className="px-6 py-2.5 bg-[#181615] text-[#FAF8F5] text-xs font-bold uppercase tracking-wider hover:bg-[#8C2524] transition-colors inline-flex items-center gap-2"
               >
-                <span>Browse Today's Edition</span>
+                <span>Browse Today&apos;s Edition</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -143,7 +141,7 @@ export default function SavedArticlesPage() {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 text-xs text-[#8C2524] font-bold uppercase tracking-wider mb-1 font-sans">
-                      {item.article.topics.length > 0 && (
+                      {item.article.topics && item.article.topics.length > 0 && (
                         <span>{item.article.topics[0].name}</span>
                       )}
                       <span>•</span>
@@ -191,19 +189,6 @@ export default function SavedArticlesPage() {
       </div>
 
       <Footer />
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(newToken, newUser) => {
-          localStorage.setItem("pn_auth_token", newToken);
-          setToken(newToken);
-          setUser(newUser);
-          setShowAuthModal(false);
-          loadSaved(newToken);
-        }}
-      />
 
       {token && (
         <MyInterestsModal

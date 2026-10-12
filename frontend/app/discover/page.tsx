@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
-import { AuthModal } from "@/components/AuthModal";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
 import {
@@ -249,7 +248,6 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showInterestsModal, setShowInterestsModal] = useState(false);
 
   // Auth check
@@ -316,7 +314,6 @@ export default function DiscoverPage() {
       <div>
         <NewspaperHeader
           user={user}
-          onOpenAuth={() => setShowAuthModal(true)}
           onOpenInterests={() => setShowInterestsModal(true)}
           onSignOut={() => {
             localStorage.removeItem("pn_auth_token");
@@ -479,17 +476,6 @@ export default function DiscoverPage() {
       <Footer />
 
       {/* Modals */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(newToken, newUser) => {
-          localStorage.setItem("pn_auth_token", newToken);
-          setToken(newToken);
-          setUser(newUser);
-          setShowAuthModal(false);
-          loadRecommendations(true);
-        }}
-      />
 
       {token && (
         <MyInterestsModal

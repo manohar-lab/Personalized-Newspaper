@@ -3,9 +3,13 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { NewspaperHeader } from "@/components/NewspaperHeader";
-import { AuthModal } from "@/components/AuthModal";
 import { MyInterestsModal } from "@/components/MyInterestsModal";
 import { Footer } from "@/components/Footer";
+import {
+  getLocalInterests,
+  saveLocalInterest,
+  removeLocalInterest,
+} from "@/lib/localStorageData";
 import {
   fetchCurrentUser,
   fetchDynamicInterestProfile,
@@ -50,7 +54,6 @@ export default function DynamicInterestsPage() {
   const [allTopics, setAllTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
@@ -64,6 +67,60 @@ export default function DynamicInterestsPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const loadData = async (authToken?: string) => {
+    setLoading(true);
+    try {
+      const topicsData = await fetchTopics();
+      setAllTopics(topicsData);
+
+      if (authToken) {
+        try {
+          const profData = await fetchDynamicInterestProfile(authToken);
+          setProfile(profData);
+          return;
+        } catch {
+          // Fall back to local
+        }
+      }
+
+      const localList = getLocalInterests();
+      const explicit_interests = localList.map((li) => ({
+        id: li.topic_slug,
+        topic_id: li.topic_slug,
+        topic_slug: li.topic_slug,
+        topic_name: li.topic_name,
+        topic_display_name: li.topic_name,
+        weight: li.weight,
+        confidence: 1.0,
+        preference: li.preference,
+        source: "EXPLICIT",
+        is_positive: li.preference === "POSITIVE",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      setProfile({
+        user_id: "local_visitor",
+        summary:
+          localList.length > 0
+            ? "Configured locally for your public news reading experience."
+            : "Select your favorite topics below to customize your news reading.",
+        explicit_interests: explicit_interests as any,
+        strong_interests: [],
+        emerging_interests: [],
+        stable_interests: [],
+        declining_interests: [],
+        dormant_interests: [],
+        avoided_topics: [],
+        top_entities: [],
+      });
+    } catch (err: any) {
+      console.error("Failed to load interest topics:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const savedToken = localStorage.getItem("pn_auth_token");
     if (savedToken) {
@@ -71,53 +128,49 @@ export default function DynamicInterestsPage() {
       fetchCurrentUser(savedToken)
         .then(setUser)
         .catch(() => {});
+      loadData(savedToken);
     } else {
-      setLoading(false);
+      loadData(undefined);
     }
   }, []);
 
-  const loadData = async () => {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const [profData, topicsData] = await Promise.all([
-        fetchDynamicInterestProfile(token),
-        fetchTopics(),
-      ]);
-      setProfile(profData);
-      setAllTopics(topicsData);
-    } catch (err: any) {
-      console.error("Failed to load dynamic profile:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (token) {
-      loadData();
-    }
-  }, [token]);
-
   // Handlers
   const handleAddExplicitTopic = async () => {
-    if (!token || !selectedTopicSlug) return;
+    if (!selectedTopicSlug) return;
+
+    const matched = allTopics.find((t) => t.slug === selectedTopicSlug);
+    const topicTitle = matched ? matched.name : selectedTopicSlug;
+
+    if (!token) {
+      saveLocalInterest(selectedTopicSlug, topicTitle, "POSITIVE", 0.9);
+      setSelectedTopicSlug("");
+      showToast("Topic preference added locally");
+      loadData(undefined);
+      return;
+    }
+
     try {
       await addOrUpdateInterest(token, selectedTopicSlug, 0.90, "POSITIVE");
       setSelectedTopicSlug("");
       showToast("Explicit topic added to your profile");
-      await loadData();
+      await loadData(token);
     } catch (err) {
       showToast("Failed to add topic preference");
     }
   };
 
   const handleRemoveExplicitTopic = async (topicSlug: string) => {
-    if (!token) return;
+    if (!token) {
+      removeLocalInterest(topicSlug);
+      showToast("Interest removed");
+      loadData(undefined);
+      return;
+    }
+
     try {
       await removeInterest(token, topicSlug);
       showToast("Explicit interest removed");
-      await loadData();
+      await loadData(token);
     } catch (err) {
       showToast("Failed to remove explicit interest");
     }
@@ -194,12 +247,12 @@ export default function DynamicInterestsPage() {
       <div>
         <NewspaperHeader
           user={user}
-          onOpenAuth={() => setShowAuthModal(true)}
           onOpenInterests={() => setShowInterestsModal(true)}
           onSignOut={() => {
             localStorage.removeItem("pn_auth_token");
             setToken(null);
             setUser(null);
+            loadData(undefined);
           }}
         />
 
@@ -238,24 +291,7 @@ export default function DynamicInterestsPage() {
             )}
           </div>
 
-          {!token ? (
-            /* Unauthorized Prompt */
-            <div className="p-12 text-center bg-white border border-[#DCD3C7] rounded-sm my-12 shadow-sm">
-              <Brain className="w-12 h-12 text-[#8C2524] mx-auto mb-4 stroke-1" />
-              <h2 className="font-editorial-heading font-bold text-2xl text-[#181615] mb-2">
-                Sign In to View Your Dynamic Intelligence Profile
-              </h2>
-              <p className="font-editorial-body text-base text-[#6C645C] max-w-md mx-auto mb-6">
-                Your active reading signals, topic growth, decay, and entity affinities continuously refine your daily personalized newspaper.
-              </p>
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="px-6 py-2.5 bg-[#181615] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#8C2524] transition-colors rounded-sm"
-              >
-                Sign In / Register
-              </button>
-            </div>
-          ) : loading ? (
+          {loading ? (
             /* Loading Skeleton */
             <div className="space-y-8 animate-pulse py-4">
               <div className="h-24 bg-[#E8E1D5]/60 rounded-sm" />
@@ -647,17 +683,7 @@ export default function DynamicInterestsPage() {
         </div>
       )}
 
-      {/* Auth & Preferences Modals */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(newToken, newUser) => {
-          localStorage.setItem("pn_auth_token", newToken);
-          setToken(newToken);
-          setUser(newUser);
-          setShowAuthModal(false);
-        }}
-      />
+
 
       {token && (
         <MyInterestsModal

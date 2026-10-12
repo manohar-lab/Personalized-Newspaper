@@ -83,19 +83,9 @@ export function NewspaperHeader({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <button
-                onClick={onOpenAuth}
-                className="font-bold text-[#8C2524] hover:underline"
-              >
-                Sign In
-              </button>
-              <span>/</span>
-              <button
-                onClick={onOpenAuth}
-                className="font-semibold text-[#181615] hover:underline"
-              >
-                Register
-              </button>
+              <span className="font-mono text-[11px] uppercase tracking-wider text-[#7A7268]">
+                Public Access Edition
+              </span>
             </div>
           )}
         </div>
@@ -222,14 +212,6 @@ export function NewspaperHeader({
               </div>
             )}
 
-            {!user && (
-              <button
-                onClick={onOpenAuth}
-                className="hidden sm:inline-flex px-3 py-1.5 bg-[#181615] text-[#FAF8F5] text-xs font-bold uppercase tracking-wider hover:bg-[#8C2524] transition-colors"
-              >
-                Sign In
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -303,17 +285,6 @@ export function NewspaperHeader({
             >
               <Sliders className="w-4 h-4" />
               <span>My Interests</span>
-            </button>
-          )}
-          {!user && (
-            <button
-              onClick={() => {
-                setShowMobileMenu(false);
-                onOpenAuth?.();
-              }}
-              className="py-2 px-3 text-left font-bold text-[#8C2524]"
-            >
-              Sign In / Register
             </button>
           )}
         </div>

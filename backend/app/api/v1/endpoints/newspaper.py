@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.models.user import User
 from app.services.newspaper_service import NewspaperService
 from app.newspaper.schemas import NewspaperEditionResponse, GenerateEditionRequest
@@ -14,10 +14,11 @@ from app.editorial.schemas import EditionStatusResponse, EditionVersionSummary
 router = APIRouter()
 
 
-@router.get("/today", response_model=NewspaperEditionResponse, summary="Get today's personalized newspaper edition")
+@router.get("/today", response_model=NewspaperEditionResponse, summary="Get today's newspaper edition")
+@router.get("/latest", response_model=NewspaperEditionResponse, summary="Get latest newspaper edition")
 @router.get("", response_model=NewspaperEditionResponse, include_in_schema=False)
 async def get_today_newspaper(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """

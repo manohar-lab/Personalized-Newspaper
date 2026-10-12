@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_current_user
 from app.models.user import User
+from app.briefings.models import NewsBriefing
 from app.briefings.engine import PersonalNewsBriefingEngine
 from app.briefings.schemas import (
     BriefingHistorySummary,
@@ -14,20 +15,34 @@ from app.briefings.schemas import (
     GenerateBriefingRequest,
     NewsBriefingResponse,
 )
+from sqlalchemy import select, desc
 
 router = APIRouter()
 
 
-@router.get("/today", response_model=NewsBriefingResponse, summary="Get today's personalized news briefing")
+@router.get("/today", response_model=Optional[NewsBriefingResponse], summary="Get today's news briefing")
 async def get_today_briefing(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Returns today's personalized news briefing snapshot (What changed since your last visit?).
-    If not yet generated, generates it automatically respecting the user's timezone.
+    Returns today's news briefing snapshot.
+    If unauthenticated, returns the latest published briefing or None.
     """
     engine = PersonalNewsBriefingEngine(db)
+    if not current_user:
+        stmt = (
+            select(NewsBriefing)
+            .where(NewsBriefing.status == "READY")
+            .order_by(desc(NewsBriefing.briefing_date), desc(NewsBriefing.generated_at))
+            .limit(1)
+        )
+        res = await db.execute(stmt)
+        br = res.scalar_one_or_none()
+        if br:
+            return await engine._format_briefing_response(br)
+        return None
+
     return await engine.get_today_briefing(current_user)
 
 

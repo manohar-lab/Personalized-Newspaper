@@ -201,6 +201,21 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_database_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+            elif v.startswith("postgresql://"):
+                v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if "channel_binding=" in v:
+                import re
+                v = re.sub(r"[?&]channel_binding=[^&]+", "", v)
+                if "?" not in v and "&" in v:
+                    v = v.replace("&", "?", 1)
+        return v
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
