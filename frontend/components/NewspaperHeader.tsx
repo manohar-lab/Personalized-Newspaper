@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { User } from "@/types";
 import {
   Search,
@@ -35,8 +36,15 @@ export function NewspaperHeader({
   searchQuery = "",
   onSearchChange,
 }: NewspaperHeaderProps) {
+  const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState<boolean>(false);
   const [showSearch, setShowSearch] = useState<boolean>(false);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const todayStr = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -50,7 +58,7 @@ export function NewspaperHeader({
       {/* Top Meta Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-1.5 text-xs text-[#6C645C] flex items-center justify-between border-b border-[#ECE5DA] font-sans">
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-[#181615]">{todayStr}</span>
+          <span className="font-semibold text-[#181615]" suppressHydrationWarning>{todayStr}</span>
           <span className="hidden sm:inline text-[#B5ABA0]">|</span>
           <span className="hidden sm:inline font-mono text-[11px] uppercase tracking-wider text-[#8C2524]">
             Personalized Daily Edition
@@ -151,6 +159,14 @@ export function NewspaperHeader({
             </Link>
 
             <Link
+              href="/search"
+              className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
+            >
+              <Search className="w-3.5 h-3.5 text-[#8C2524]" />
+              <span>Search</span>
+            </Link>
+
+            <Link
               href="/stories"
               className="hover:text-[#8C2524] transition-colors flex items-center gap-1.5 py-2 border-b-2 border-transparent hover:border-[#8C2524]"
             >
@@ -197,10 +213,11 @@ export function NewspaperHeader({
                 <Search className="w-4 h-4 text-[#7A7268] absolute left-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search stories..."
+                  placeholder="Search stories (Enter to search)..."
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-8 pr-3 py-1 text-xs bg-white border border-[#DCD3C7] rounded-sm focus:outline-none focus:border-[#181615] text-[#181615] w-36 sm:w-56"
+                  onKeyDown={handleSearchKeyDown}
+                  className="pl-8 pr-3 py-1 text-xs bg-white border border-[#DCD3C7] rounded-sm focus:outline-none focus:border-[#181615] text-[#181615] w-36 sm:w-60 shadow-sm"
                 />
               </div>
             )}
@@ -259,6 +276,14 @@ export function NewspaperHeader({
           >
             <Bookmark className="w-4 h-4" />
             <span>Saved Stories</span>
+          </Link>
+          <Link
+            href="/search"
+            onClick={() => setShowMobileMenu(false)}
+            className="py-2 px-3 hover:bg-[#F3ECE2] font-semibold text-[#181615] flex items-center gap-2"
+          >
+            <Search className="w-4 h-4 text-[#8C2524]" />
+            <span>Search Engine</span>
           </Link>
           <Link
             href="/sources"

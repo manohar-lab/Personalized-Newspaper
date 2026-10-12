@@ -45,7 +45,7 @@ import {
   X,
 } from "lucide-react";
 
-export default function ArticlePage() {
+function ArticlePageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -933,5 +933,19 @@ export default function ArticlePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ArticlePage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAF8F5] p-8 text-center text-xs text-stone-500 font-sans">
+          Loading article...
+        </div>
+      }
+    >
+      <ArticlePageContent />
+    </React.Suspense>
   );
 }

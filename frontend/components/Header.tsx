@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { BackendStatusBadge } from "./BackendStatusBadge";
-import { Newspaper, Sliders, User as UserIcon, LogOut, Sparkles, Brain, Compass, ShieldCheck } from "lucide-react";
+import { Newspaper, Sliders, User as UserIcon, LogOut, Sparkles, Brain, Compass, ShieldCheck, Search, Bookmark } from "lucide-react";
 import { User } from "@/types";
 
 interface HeaderProps {
@@ -31,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="w-full bg-paper-50 pt-4 pb-2 px-4 sm:px-8 max-w-7xl mx-auto">
       {/* Top Meta Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-center text-xs text-paper-800 border-b border-paper-300 pb-2 mb-3 gap-2">
-        <div className="font-serif italic text-gray-600">
+        <div className="font-serif italic text-gray-600" suppressHydrationWarning>
           {currentDate} • Daily Edition
         </div>
         <div className="flex items-center space-x-4">
@@ -41,59 +42,67 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Main Newspaper Masthead */}
       <div className="text-center py-4 border-b-2 border-[#121212]">
-        <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#121212] uppercase">
-          Personalized Newspaper
-        </h1>
-        <p className="font-serif italic text-sm sm:text-base text-gray-700 mt-1">
-          &ldquo;Your news. Your interests. Your newspaper.&rdquo;
-        </p>
+        <Link href="/" className="inline-block group">
+          <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#121212] uppercase group-hover:text-red-700 transition-colors">
+            Personalized Newspaper
+          </h1>
+          <p className="font-serif italic text-sm sm:text-base text-gray-700 mt-1">
+            &ldquo;Your news. Your interests. Your newspaper.&rdquo;
+          </p>
+        </Link>
       </div>
 
       {/* Navigation Bar */}
       <nav className="flex justify-between items-center py-2.5 border-b border-[#D3CBB9] text-xs font-semibold uppercase tracking-wider text-[#121212]">
         <div className="flex items-center space-x-4 sm:space-x-6 overflow-x-auto py-1">
-          <a
+          <Link
             href="/"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold pb-0.5 shrink-0"
           >
             <Newspaper className="h-3.5 w-3.5" /> Front Page
-          </a>
-          <a
+          </Link>
+          <Link
             href="/interests"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
             <Brain className="h-3.5 w-3.5 text-red-700" /> Interests Engine
-          </a>
-          <a
+          </Link>
+          <Link
             href="/discover"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
             <Compass className="h-3.5 w-3.5 text-red-700" /> Discover
-          </a>
-          <a
+          </Link>
+          <Link
             href="/search"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
-            🔎 Search Engine
-          </a>
-          <a
+            <Search className="h-3.5 w-3.5 text-red-700" /> Search Engine
+          </Link>
+          <Link
             href="/history"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
-            📖 Reading History
-          </a>
-          <a
+            <Sparkles className="h-3.5 w-3.5 text-red-700" /> Reading History
+          </Link>
+          <Link
+            href="/saved"
+            className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
+          >
+            <Bookmark className="h-3.5 w-3.5" /> Saved Stories
+          </Link>
+          <Link
             href="/stories"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
-            ⚡ Developing Stories
-          </a>
-          <a
+            <span>⚡ Stories</span>
+          </Link>
+          <Link
             href="/sources"
             className="hover:text-red-700 transition-colors flex items-center gap-1.5 font-bold uppercase shrink-0 text-gray-800"
           >
             <ShieldCheck className="h-3.5 w-3.5 text-red-700" /> Sources Directory
-          </a>
+          </Link>
           <button
             type="button"
             onClick={user ? onOpenOnboarding : onOpenAuth}

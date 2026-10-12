@@ -14,6 +14,16 @@
   --accent-crimson: #8C2524;
 }
 
+.dark {
+  --background: #121110;
+  --foreground: #F5EFEB;
+  --paper-cream: #1A1918;
+  --paper-border: #2C2825;
+  --ink-black: #FAF8F5;
+  --ink-muted: #A39B91;
+  --accent-crimson: #C24543;
+}
+
 body {
   color: var(--foreground);
   background-color: var(--background);

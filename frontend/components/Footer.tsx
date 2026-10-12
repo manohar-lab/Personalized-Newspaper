@@ -49,7 +49,7 @@ export function Footer() {
 
       <div className="max-w-7xl mx-auto border-t border-paper-300 pt-4 flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500 font-sans">
         <div>
-          © {new Date().getFullYear()} Personalized Newspaper. Phase 1 Architecture Foundation.
+          © {new Date().getFullYear()} Personalized Newspaper. Personalized Daily Digital Edition.
         </div>
         <div className="flex items-center space-x-4 mt-2 sm:mt-0">
           <span>Terms of Service</span>
