@@ -21,6 +21,8 @@ export default function RegisterPage() {
     try {
       const resp = await registerUser(email, password, fullName || undefined);
       localStorage.setItem("pn_auth_token", resp.access_token);
+      localStorage.setItem("auth_token", resp.access_token);
+      localStorage.setItem("token", resp.access_token);
       // Route to onboarding so they can select their interests
       router.push("/onboarding");
     } catch (err: any) {

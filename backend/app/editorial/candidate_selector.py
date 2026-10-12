@@ -121,6 +121,47 @@ class EditorialCandidateSelector:
         articles_res = await self.session.execute(articles_stmt)
         articles = list(articles_res.scalars().all())
 
+        # Graceful fallback: if no articles or stories exist within the lookback window
+        # (e.g. interval between ingestion cycles or existing ingested batches),
+        # fetch the most recent published articles and stories to ensure readers receive an edition.
+        if not stories and not articles:
+            logger.info("No items within lookback window. Falling back to most recent published articles and stories.")
+            fallback_articles_stmt = (
+                select(Article)
+                .options(
+                    selectinload(Article.analysis),
+                    selectinload(Article.topics),
+                    selectinload(Article.entities),
+                    selectinload(Article.source),
+                )
+                .where(Article.status == "PUBLISHED")
+                .order_by(Article.published_at.desc())
+                .limit(150)
+            )
+            fallback_art_res = await self.session.execute(fallback_articles_stmt)
+            articles = list(fallback_art_res.scalars().all())
+
+            fallback_stories_stmt = (
+                select(Story)
+                .options(
+                    selectinload(Story.primary_article).selectinload(Article.analysis),
+                    selectinload(Story.primary_article).selectinload(Article.topics),
+                    selectinload(Story.primary_article).selectinload(Article.entities),
+                    selectinload(Story.latest_article).selectinload(Article.analysis),
+                    selectinload(Story.latest_article).selectinload(Article.topics),
+                    selectinload(Story.story_articles).selectinload(StoryArticle.article).selectinload(Article.analysis),
+                    selectinload(Story.primary_topic),
+                )
+                .where(
+                    Story.merged_into_story_id == None,
+                    Story.status.in_(["ACTIVE", "DEVELOPING", "STABLE"]),
+                )
+                .order_by(Story.importance_score.desc(), Story.last_updated_at.desc())
+                .limit(100)
+            )
+            fallback_story_res = await self.session.execute(fallback_stories_stmt)
+            stories = list(fallback_story_res.scalars().all())
+
         # Also get recommendations (Phase 14)
         rec_article_ids: Set[uuid.UUID] = set()
         try:

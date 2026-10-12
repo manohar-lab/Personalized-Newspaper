@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,400;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #FAF8F5;
@@ -52,7 +52,7 @@ body {
 }
 
 .newspaper-col-border {
-  border-right: 1px solid #E4DC CF;
+  border-right: 1px solid #E4DCCF;
 }
 
 @media (max-width: 1024px) {

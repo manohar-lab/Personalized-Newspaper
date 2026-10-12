@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Newspaper, Sliders, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Newspaper, Sliders, RefreshCw, Rss, ArrowRight } from "lucide-react";
 
 interface EmptyNewspaperStateProps {
   type: "no_interests" | "no_articles" | "error";
@@ -46,28 +47,49 @@ export function EmptyNewspaperState({
 
   if (type === "no_articles") {
     return (
-      <div className="max-w-2xl mx-auto my-16 p-8 sm:p-12 text-center bg-white border border-[#DCD3C7] font-sans">
-        <div className="w-16 h-16 bg-[#F5EFEB] rounded-full flex items-center justify-center mx-auto mb-6 text-[#5C554E]">
+      <div className="max-w-2xl mx-auto my-16 p-8 sm:p-12 text-center bg-white border-2 border-paper-300 shadow-sm font-sans">
+        <div className="w-16 h-16 bg-paper-100 border border-paper-300 rounded-full flex items-center justify-center mx-auto mb-6 text-ink-muted">
           <Newspaper className="w-8 h-8" />
         </div>
 
-        <h2 className="font-editorial-heading text-2xl font-bold text-[#181615] mb-3">
+        <h2 className="font-editorial-heading text-2xl sm:text-3xl font-bold text-ink mb-3">
           Your newspaper is waiting for today's stories.
         </h2>
 
-        <p className="font-editorial-body text-base text-[#5C554E] max-w-md mx-auto mb-6">
-          No published articles matched your selected criteria at this moment. Check back soon for the next editorial dispatch.
+        <p className="font-editorial-body text-base text-ink-muted max-w-lg mx-auto mb-6 leading-relaxed">
+          No published articles matched your selected criteria at this moment. You can refresh the edition with the latest updates or trigger live feed ingestion from your configured news sources.
         </p>
 
-        {onRetry && (
-          <button
-            onClick={onRetry}
-            className="px-5 py-2.5 bg-white border border-[#181615] text-[#181615] text-xs font-bold uppercase tracking-wider hover:bg-[#F5EFEB] transition-colors inline-flex items-center gap-2"
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="px-5 py-2.5 bg-ink text-paper-50 text-xs font-bold uppercase tracking-wider hover:bg-crimson transition-colors inline-flex items-center gap-2 shadow-sm"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Refresh Edition</span>
+            </button>
+          )}
+
+          <Link
+            href="/sources"
+            className="px-5 py-2.5 bg-white border border-paper-300 text-ink text-xs font-bold uppercase tracking-wider hover:bg-paper-100 hover:border-ink transition-colors inline-flex items-center gap-2"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh Edition</span>
-          </button>
-        )}
+            <Rss className="w-3.5 h-3.5 text-crimson" />
+            <span>Manage News Sources</span>
+          </Link>
+        </div>
+
+        <div className="pt-6 border-t border-paper-200 text-xs text-ink-light flex flex-col sm:flex-row items-center justify-center gap-2">
+          <span>Need to ingest articles?</span>
+          <Link
+            href="/sources"
+            className="font-semibold text-crimson hover:underline inline-flex items-center gap-1"
+          >
+            <span>Trigger feed ingestion from RSS sources</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
       </div>
     );
   }

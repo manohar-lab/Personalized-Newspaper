@@ -20,6 +20,8 @@ export default function LoginPage() {
     try {
       const resp = await loginUser(email, password);
       localStorage.setItem("pn_auth_token", resp.access_token);
+      localStorage.setItem("auth_token", resp.access_token);
+      localStorage.setItem("token", resp.access_token);
       router.push("/newspaper");
     } catch (err: any) {
       setError(err?.message || "Invalid credentials. Please try again.");

@@ -44,7 +44,10 @@ export default function NewspaperPage() {
   const [showInterestsModal, setShowInterestsModal] = useState<boolean>(false);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem("pn_auth_token");
+    const savedToken =
+      localStorage.getItem("pn_auth_token") ||
+      localStorage.getItem("auth_token") ||
+      localStorage.getItem("token");
     if (savedToken) {
       setToken(savedToken);
       loadUserAndEdition(savedToken);
@@ -89,6 +92,8 @@ export default function NewspaperPage() {
       console.warn("Error fetching newspaper edition:", err);
       if (err?.message?.includes("credentials") || err?.message?.includes("401")) {
         localStorage.removeItem("pn_auth_token");
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("token");
         setToken(null);
         setUser(null);
         setShowAuthModal(true);
@@ -129,6 +134,8 @@ export default function NewspaperPage() {
 
   const handleAuthSuccess = (newToken: string, newUser: User) => {
     localStorage.setItem("pn_auth_token", newToken);
+    localStorage.setItem("auth_token", newToken);
+    localStorage.setItem("token", newToken);
     setToken(newToken);
     setUser(newUser);
     setShowAuthModal(false);
@@ -137,6 +144,8 @@ export default function NewspaperPage() {
 
   const handleSignOut = () => {
     localStorage.removeItem("pn_auth_token");
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
     setToken(null);
     setUser(null);
     setEdition(null);
