@@ -49,9 +49,12 @@ async def check_database_connection() -> Dict[str, Any]:
             "detail": "Successfully connected to database instance.",
         }
     except Exception as exc:
-        logger.warning(f"Database health check failed: {str(exc)}")
+        import re
+        err_msg = str(exc)
+        sanitized_msg = re.sub(r":([^:@\s]+)@", ":***@", err_msg)
+        logger.warning(f"Database health check failed: {type(exc).__name__}: {sanitized_msg}")
         return {
             "status": "disconnected",
-            "database": "postgresql",
-            "detail": f"Connection failed: {str(exc)}",
+            "database": "postgresql" if "postgresql" in settings.DATABASE_URL else "sqlite",
+            "detail": f"Connection failed: {sanitized_msg}",
         }

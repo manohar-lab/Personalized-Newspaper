@@ -20,7 +20,11 @@ class Settings(BaseSettings):
     # API Configuration
     API_BASE_URL: str = Field(default="http://localhost:8000")
     FRONTEND_URL: str = Field(default="http://localhost:3000")
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://personalized-newspaper.vercel.app",
+    ]
 
     # Ingestion & Extraction Configuration
     USER_AGENT: str = Field(
@@ -39,6 +43,9 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = Field(default="mock")  # "mock" | "openai" | "gemini"
     AI_MODEL: str = Field(default="gpt-4o-mini")
     AI_API_KEY: Optional[str] = Field(default=None)
+    GEMINI_API_KEY: Optional[str] = Field(default=None)
+    GOOGLE_API_KEY: Optional[str] = Field(default=None)
+    OPENAI_API_KEY: Optional[str] = Field(default=None)
     AI_API_BASE_URL: Optional[str] = Field(default=None)
     EMBEDDING_PROVIDER: str = Field(default="mock")  # "mock" | "openai" | "gemini"
     EMBEDDING_MODEL: str = Field(default="text-embedding-3-small")
@@ -195,35 +202,97 @@ class Settings(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=True,
     )
 
+    def get_ai_api_key(self, provider: Optional[str] = None) -> Optional[str]:
+        """Resolves the appropriate API key for the specified AI provider without logging secrets."""
+        p = (provider or self.AI_PROVIDER or "").lower().strip()
+        if p == "gemini":
+            return (
+                self.GEMINI_API_KEY
+                or self.GOOGLE_API_KEY
+                or self.AI_API_KEY
+                or os.getenv("GEMINI_API_KEY")
+                or os.getenv("GOOGLE_API_KEY")
+                or os.getenv("AI_API_KEY")
+            )
+        elif p == "openai":
+            return (
+                self.OPENAI_API_KEY
+                or self.AI_API_KEY
+                or os.getenv("OPENAI_API_KEY")
+                or os.getenv("AI_API_KEY")
+            )
+        return self.AI_API_KEY or os.getenv("AI_API_KEY")
+
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_database_url(cls, v: str) -> str:
         if isinstance(v, str):
+            # Normalize driver prefix for asyncpg
             if v.startswith("postgres://"):
                 v = v.replace("postgres://", "postgresql+asyncpg://", 1)
-            elif v.startswith("postgresql://"):
+            elif v.startswith("postgresql://") and not v.startswith("postgresql+asyncpg://"):
                 v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
-            if "channel_binding=" in v:
-                import re
-                v = re.sub(r"[?&]channel_binding=[^&]+", "", v)
-                if "?" not in v and "&" in v:
-                    v = v.replace("&", "?", 1)
+
+            import urllib.parse
+            parsed = urllib.parse.urlsplit(v)
+            if parsed.query:
+                query_pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+                new_pairs = []
+                ssl_val = None
+                for k, val in query_pairs:
+                    if k in ("sslmode", "ssl"):
+                        # Capture requested ssl mode
+                        ssl_val = val
+                    elif k == "channel_binding":
+                        # asyncpg does not accept channel_binding
+                        continue
+                    else:
+                        new_pairs.append((k, val))
+
+                # asyncpg uses 'ssl', not 'sslmode'
+                if ssl_val is not None:
+                    new_pairs.append(("ssl", ssl_val))
+                elif "neon.tech" in parsed.netloc:
+                    new_pairs.append(("ssl", "require"))
+
+                new_query = urllib.parse.urlencode(new_pairs)
+                v = urllib.parse.urlunsplit(
+                    (parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment)
+                )
+            else:
+                if "neon.tech" in parsed.netloc:
+                    v = urllib.parse.urlunsplit(
+                        (parsed.scheme, parsed.netloc, parsed.path, "ssl=require", parsed.fragment)
+                    )
         return v
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        default_origins = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://personalized-newspaper.vercel.app",
+        ]
         if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
+            origins = [i.strip() for i in v.split(",") if i.strip()]
+            for d in default_origins:
+                if d not in origins:
+                    origins.append(d)
+            return origins
         elif isinstance(v, list):
-            return v
-        return ["http://localhost:3000", "http://127.0.0.1:3000"]
+            origins = list(v)
+            for d in default_origins:
+                if d not in origins:
+                    origins.append(d)
+            return origins
+        return default_origins
 
     def validate_weights(self) -> None:
         total = (

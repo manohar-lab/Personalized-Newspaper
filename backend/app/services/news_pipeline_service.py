@@ -168,9 +168,17 @@ class NewsPipelineService:
                 for art in articles:
                     try:
                         ext_res = await self.extraction_service.extract_article(art.id)
-                        if ext_res.get("success"):
+                        if isinstance(ext_res, dict):
+                            res_success = ext_res.get("success")
+                            res_status = ext_res.get("status")
+                        else:
+                            st_val = getattr(ext_res.status, "value", str(getattr(ext_res, "status", "")))
+                            res_success = (st_val == "SUCCESS") or getattr(ext_res, "is_full_text_available", False)
+                            res_status = st_val
+
+                        if res_success:
                             succeeded += 1
-                        elif ext_res.get("status") in ["ROBOTS_BLOCKED", "PAYWALL", "ACCESS_DENIED"]:
+                        elif res_status in ["ROBOTS_BLOCKED", "PAYWALL", "ACCESS_DENIED"]:
                             skipped += 1
                         else:
                             failed += 1
@@ -261,18 +269,14 @@ class NewsPipelineService:
                     await self.session.commit()
                     return {"run_id": str(run.id), "status": "SUCCESS", "analyzed": 0, "failed": 0}
 
-                semaphore = asyncio.Semaphore(max_concurrency)
-
-                async def _analyze_with_semaphore(art_id: uuid.UUID) -> Dict[str, Any]:
-                    async with semaphore:
-                        try:
-                            return await self.analysis_service.analyze_article(art_id)
-                        except Exception as e:
-                            logger.warning(f"Error analyzing article {art_id}: {e}")
-                            return {"article_id": str(art_id), "status": "FAILED", "error": str(e)}
-
-                tasks = [_analyze_with_semaphore(aid) for aid in article_ids]
-                results = await asyncio.gather(*tasks, return_exceptions=False)
+                results = []
+                for aid in article_ids:
+                    try:
+                        res_item = await self.analysis_service.analyze_article(aid)
+                        results.append(res_item)
+                    except Exception as e:
+                        logger.warning(f"Error analyzing article {aid}: {e}")
+                        results.append({"article_id": str(aid), "status": "FAILED", "error": str(e)})
 
                 succeeded = sum(1 for r in results if r.get("status") == "SUCCESS")
                 failed = sum(1 for r in results if r.get("status") != "SUCCESS")

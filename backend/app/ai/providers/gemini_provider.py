@@ -27,8 +27,12 @@ class GeminiArticleAnalyzer(ArticleAnalyzer):
         api_key: Optional[str] = None,
         model: Optional[str] = None,
     ):
-        self.api_key = api_key or settings.AI_API_KEY
-        self.model = model or settings.AI_MODEL or "gemini-1.5-flash"
+        self.api_key = api_key or settings.get_ai_api_key("gemini")
+        configured_model = model or settings.AI_MODEL
+        if not configured_model or configured_model == "gpt-4o-mini" or "gemini" not in configured_model.lower():
+            self.model = "gemini-1.5-flash"
+        else:
+            self.model = configured_model
 
     async def analyze_article(
         self,
