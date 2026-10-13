@@ -272,6 +272,13 @@ class Settings(BaseSettings):
                     )
         return v
 
+    @field_validator("FRONTEND_URL", mode="before")
+    @classmethod
+    def normalize_frontend_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip().rstrip("/")
+        return v
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
@@ -280,19 +287,27 @@ class Settings(BaseSettings):
             "http://127.0.0.1:3000",
             "https://personalized-newspaper.vercel.app",
         ]
-        if isinstance(v, str) and not v.startswith("["):
-            origins = [i.strip() for i in v.split(",") if i.strip()]
-            for d in default_origins:
-                if d not in origins:
-                    origins.append(d)
-            return origins
+        origins = []
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        origins = [str(i).strip().rstrip("/") for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            if not origins:
+                origins = [i.strip().rstrip("/") for i in v_str.split(",") if i.strip()]
         elif isinstance(v, list):
-            origins = list(v)
-            for d in default_origins:
-                if d not in origins:
-                    origins.append(d)
-            return origins
-        return default_origins
+            origins = [str(i).strip().rstrip("/") for i in v if str(i).strip()]
+
+        for d in default_origins:
+            d_clean = d.strip().rstrip("/")
+            if d_clean not in origins:
+                origins.append(d_clean)
+        return origins
 
     def validate_weights(self) -> None:
         total = (

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.logging import setup_logging, logger
 from app.api.v1.router import api_v1_router
@@ -56,9 +57,23 @@ app = FastAPI(
 )
 
 # CORS Configuration
-origins = settings.CORS_ORIGINS
-if settings.FRONTEND_URL and settings.FRONTEND_URL not in origins:
-    origins.append(settings.FRONTEND_URL)
+# Strip any trailing slashes and whitespace because browser Origin headers never have trailing slashes
+raw_origins = list(settings.CORS_ORIGINS)
+if settings.FRONTEND_URL:
+    raw_origins.append(settings.FRONTEND_URL)
+
+raw_origins.extend([
+    "https://personalized-newspaper.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+])
+
+origins = []
+for o in raw_origins:
+    if isinstance(o, str):
+        cleaned = o.strip().rstrip("/")
+        if cleaned and cleaned not in origins:
+            origins.append(cleaned)
 
 app.add_middleware(
     CORSMiddleware,
@@ -66,7 +81,24 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    max_age=600,
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception(f"Unhandled server error processing {request.method} {request.url.path}: {exc}")
+    origin = request.headers.get("origin")
+    resp_headers = {}
+    if origin and origin.rstrip("/") in origins:
+        resp_headers["Access-Control-Allow-Origin"] = origin
+        resp_headers["Access-Control-Allow-Credentials"] = "true"
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers=resp_headers,
+    )
+
 
 # Mount health & API routes at /api
 app.include_router(api_v1_router, prefix="/api")

@@ -261,10 +261,18 @@ class EditorialNewsroom:
         u_stmt = select(User).limit(1)
         u_res = await self.session.execute(u_stmt)
         first_user = u_res.scalars().first()
-        if first_user:
-            return await self.generate_edition(user_id=first_user.id, edition_date=today_str)
+        if not first_user:
+            first_user = User(
+                email="public_reader@personalizednewspaper.internal",
+                password_hash="not_a_real_password",
+                full_name="Public Reader",
+                is_active=True,
+            )
+            self.session.add(first_user)
+            await self.session.commit()
+            await self.session.refresh(first_user)
 
-        return await self._generate_emergency_fallback(uuid.uuid4(), today_str, 1)
+        return await self.generate_edition(user_id=first_user.id, edition_date=today_str)
 
     async def get_edition_by_date(
         self,
@@ -697,6 +705,23 @@ class EditorialNewsroom:
     ) -> NewspaperEditionResponse:
         """Creates a graceful fallback edition if advanced components encounter an unexpected error."""
         logger.warning(f"Generating emergency fallback edition for user {user_id}")
+
+        # Ensure user_id exists in users table to satisfy foreign key constraint
+        u_check = await self.session.execute(select(User.id).where(User.id == user_id))
+        resolved_uid = u_check.scalar_one_or_none()
+        if not resolved_uid:
+            first_u = (await self.session.execute(select(User).limit(1))).scalars().first()
+            if not first_u:
+                first_u = User(
+                    email="public_reader@personalizednewspaper.internal",
+                    password_hash="not_a_real_password",
+                    full_name="Public Reader",
+                    is_active=True,
+                )
+                self.session.add(first_u)
+                await self.session.flush()
+            resolved_uid = first_u.id
+
         stmt = (
             select(Article)
             .options(selectinload(Article.analysis), selectinload(Article.topics), selectinload(Article.source))
@@ -708,7 +733,7 @@ class EditorialNewsroom:
         articles = list(res.scalars().all())
 
         edition = NewspaperEdition(
-            user_id=user_id,
+            user_id=resolved_uid,
             edition_date=target_date_str,
             title="PERSONAL DAILY",
             subtitle=f"Daily Edition (v{version})",
