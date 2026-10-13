@@ -1,5 +1,6 @@
 """news_sessions.py — Phase 18 User News Session API Endpoints."""
 import uuid
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 

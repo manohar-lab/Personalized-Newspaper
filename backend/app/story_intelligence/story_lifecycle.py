@@ -2,7 +2,7 @@
 import math
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from app.source_intelligence.quality_metrics import QualityMetricsCalculator
 

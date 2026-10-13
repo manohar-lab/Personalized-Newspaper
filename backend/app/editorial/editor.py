@@ -2,7 +2,7 @@
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
